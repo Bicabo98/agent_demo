@@ -1,8 +1,8 @@
 import { defineConfig } from '@umijs/max';
 
 export default defineConfig({
-  base: '/chat',
-  publicPath: '/chat/',
+  base: '/',
+  publicPath: '/',
   title: 'agentic-chat',
   history: { type: 'browser' },
   antd: {},
