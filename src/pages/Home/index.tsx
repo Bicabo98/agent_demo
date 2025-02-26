@@ -452,7 +452,7 @@ const HomePage: React.FC = () => {
       }
 
       const nodeId = data?.data?.id;
-      const nodeName = "Base Model";
+      const nodeName = data?.data?.properties?.rawData?.nodeData?.name;
       if (!nodeName) {
         message.error('cannot get node info');
         return;
@@ -463,14 +463,11 @@ const HomePage: React.FC = () => {
       let modelInfo;
       const isModified = manuallyModifiedNodes.includes(nodeName);
       if (nodeName && modelsContributionsRef.current[nodeName]) {
-
         modelInfo = JSON.parse(JSON.stringify(modelsContributionsRef.current[nodeName]));
-
         if (isModified) {
           modelInfo.isManuallyModified = true;
         }
       }
-
       else if (nodeName && modelsContributions[nodeName]) {
         modelInfo = JSON.parse(JSON.stringify(modelsContributions[nodeName]));
         if (isModified) {
