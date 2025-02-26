@@ -1,16 +1,20 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from 'react';
 import { Modal, Button } from "antd"
 import ChatWindow from "./ChatWindow"
-
-const ChatModal: React.FC = () => {
+interface Props {
+  show: boolean,
+  onClose: () => void,
+  data:any,
+}
+const ChatModal: React.FC<Props> = (props) => {
+  const {show,onClose} = props
   const [isModalVisible, setIsModalVisible] = useState(false)
-
-  const showModal = () => {
-    setIsModalVisible(true)
-  }
+  useEffect(() => {
+    setIsModalVisible(show)
+  }, [show])
 
   const handleCancel = () => {
     setIsModalVisible(false)
@@ -18,8 +22,9 @@ const ChatModal: React.FC = () => {
 
   return (
     <>
-      <Button onClick={showModal}>打开聊天</Button>
-      <Modal title="微信聊天" visible={isModalVisible} onCancel={handleCancel} footer={null} width={340}>
+      <Modal title="聊天" keyboard={false} open={isModalVisible} closable afterClose={() => {
+        onClose()
+      }} onCancel={handleCancel} footer={null} width={600}>
         <ChatWindow />
       </Modal>
     </>

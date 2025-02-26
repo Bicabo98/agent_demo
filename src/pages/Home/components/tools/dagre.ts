@@ -21,10 +21,9 @@ export default class Dagre {
       align: 'DR',
       nodesep,
       ranksep,
-      begin: [120, 120],
+      begin: [200, 200],
       ...option,
     };
-
     const layoutInstance = new DagreLayout(this.option);
     const layoutData = layoutInstance.layout({
       nodes: nodes.map((node: any) => ({

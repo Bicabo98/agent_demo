@@ -17,7 +17,8 @@ const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 400px;
-  width: 300px;
+  width: 600;
+  background-color: #f5f5f5;
 `
 
 const MessageList = styled.div`
@@ -29,6 +30,7 @@ const MessageList = styled.div`
 const InputContainer = styled.div`
   display: flex;
   padding: 10px;
+  background-color: #fff;
 `
 
 const StyledInput = styled(Input)`
@@ -39,18 +41,35 @@ const StyledInput = styled(Input)`
 const MessageBubble = styled.div<{ isMine: boolean }>`
   max-width: 80%;
   padding: 8px 12px;
-  border-radius: 18px;
   margin-bottom: 10px;
   background-color: ${(props) => (props.isMine ? "#95ec69" : "#ffffff")};
-  align-self: ${(props) => (props.isMine ? "flex-end" : "flex-start")};
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #000000;
+  border-radius: 8px;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    ${(props) =>
+            props.isMine
+                    ? `right: -5px;
+         border-left-color: #95ec69;
+         border-right: 0;`
+                    : `left: -5px;
+         border-right-color: #ffffff;
+         border-left: 0;`}
+  }
 `
 
 const ChatWindow: React.FC = () => {
   const [messages, setMessages] = useState(initialMessages)
   const [inputValue, setInputValue] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
+  const messagesListRef = useRef<HTMLDivElement>(null)
   const handleSend = () => {
     if (inputValue.trim()) {
       const newMessage = {
@@ -61,6 +80,7 @@ const ChatWindow: React.FC = () => {
       }
       setMessages([...messages, newMessage])
       setInputValue("")
+      // messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
   }
 
@@ -71,18 +91,29 @@ const ChatWindow: React.FC = () => {
   }
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [])
+    // 确保更新完成后再滚动
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth"
+      });
+    });
+  }, [messages]); // 添加消息数组作为依赖
 
   return (
     <ChatContainer>
-      <MessageList>
+      <MessageList ref={messagesListRef}>
         <List
           itemLayout="horizontal"
           dataSource={messages}
           renderItem={(item) => (
-            <List.Item style={{ justifyContent: item.sender === "me" ? "flex-end" : "flex-start" }}>
-              {item.sender !== "me" && <Avatar src={item.avatar} />}
+            <List.Item
+              style={{
+                justifyContent: item.sender === "me" ? "flex-end" : "flex-start",
+                border: "none",
+                padding: "4px 0",
+              }}
+            >
+              {item.sender !== "me" && <Avatar src={item.avatar} style={{ marginRight: "8px" }} />}
               <MessageBubble isMine={item.sender === "me"}>{item.content}</MessageBubble>
               {item.sender === "me" && <Avatar src={item.avatar} style={{ marginLeft: "8px" }} />}
             </List.Item>
