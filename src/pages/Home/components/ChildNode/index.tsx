@@ -1,30 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ReactNodeProps } from '@logicflow/react-node-registry';
 
 const ChildNode: React.FC<ReactNodeProps> = (props) => {
-  const isNewNode = props.properties?.isNewNode;
-  
-  // 安全地获取文本值
+  const [isAnimating, setIsAnimating] = useState(false);
   const textValue = props.model?.text?.value || props.properties?.name || '';
-  
+  const isNewNode = props.properties?.isNewNode;
+
+  useEffect(() => {
+    if (isNewNode) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 600000);
+      return () => clearTimeout(timer);
+    }
+  }, [isNewNode]);
+
   return (
     <div
-      className={`child-node ${isNewNode ? 'training-node' : ''}`}
+      className="child-node"
       style={{
         width: '140px',
         height: '48px',
         background: isNewNode 
-          ? 'linear-gradient(135deg, #722ed1 0%, #f759ab 100%)' 
-          : 'linear-gradient(135deg, #fa8c16 0%, #f5222d 100%)',
+          ? '#ffffff'  // 新节点使用白色背景
+          : 'linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%)',  // 已有节点保持青色渐变
         boxShadow: isNewNode
-          ? `0 0 15px rgba(114, 46, 209, 0.5),
-             inset 0 -2px 5px rgba(255, 255, 255, 0.2),
-             inset 0 2px 5px rgba(255, 255, 255, 0.1)`
-          : `0 3px 10px rgba(250, 140, 22, 0.2),
-             inset 0 -2px 5px rgba(255, 255, 255, 0.15),
-             inset 0 2px 5px rgba(255, 255, 255, 0.08)`,
+          ? `0 4px 12px rgba(0, 0, 0, 0.1),
+             inset 0 -2px 6px rgba(0, 0, 0, 0.02),
+             inset 0 2px 6px rgba(0, 0, 0, 0.02)`
+          : `0 3px 10px rgba(19, 194, 194, 0.2),
+             inset 0 -1px 4px rgba(255, 255, 255, 0.1),
+             inset 0 1px 4px rgba(255, 255, 255, 0.1)`,
         borderRadius: '24px',
-        border: `1px solid ${isNewNode ? 'rgba(247, 89, 171, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
+        border: isNewNode 
+          ? '1px solid rgba(0, 0, 0, 0.1)'  // 新节点使用浅灰色边框
+          : '1px solid rgba(255, 255, 255, 0.2)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -34,37 +45,22 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
         overflow: 'hidden',
       }}
     >
-      {/* 背景光效 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: '-50%',
-          width: '200%',
-          height: '100%',
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-          transform: 'translateX(-100%)',
-          animation: 'shimmer-child 4s infinite',
-        }}
-      />
-      
-      {/* 训练动画效果 */}
-      {isNewNode && (
-        <div 
-          className="training-animation"
+      {/* 添加背景光效 - 只在非新节点时显示 */}
+      {!isNewNode && (
+        <div
           style={{
             position: 'absolute',
             top: 0,
-            left: 0,
-            width: '100%',
+            left: '-50%',
+            width: '200%',
             height: '100%',
-            borderRadius: '24px',
-            overflow: 'hidden',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+            transform: 'translateX(-100%)',
+            animation: 'shimmer 3s infinite',
           }}
         />
       )}
       
-      {/* 文本容器 */}
       <div
         style={{
           position: 'relative',
@@ -74,24 +70,35 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
           zIndex: 2,
         }}
       >
-        {/* 文本 */}
         <span
           style={{
-            color: '#ffffff',
+            color: isNewNode ? '#333333' : '#ffffff',  // 新节点使用深色文字
             fontSize: '15px',
             fontWeight: 500,
-            textShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
+            textShadow: isNewNode 
+              ? 'none'  // 新节点不需要文字阴影
+              : '0 1px 2px rgba(0, 0, 0, 0.15)',
             letterSpacing: '0.5px',
           }}
         >
           {textValue}
-          {isNewNode && <span className="training-indicator"> 🔄</span>}
+          {isAnimating && (
+            <span 
+              style={{
+                display: 'inline-block',
+                marginLeft: '4px',
+                animation: 'rotate 1.5s linear infinite',
+              }}
+            >
+              🔄
+            </span>
+          )}
         </span>
       </div>
 
       <style>
         {`
-          @keyframes shimmer-child {
+          @keyframes shimmer {
             0% {
               transform: translateX(-100%);
             }
@@ -101,42 +108,6 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
             100% {
               transform: translateX(100%);
             }
-          }
-          
-          .training-node {
-            animation: pulse 2s infinite;
-          }
-          
-          @keyframes pulse {
-            0% {
-              box-shadow: 0 0 0 0 rgba(114, 46, 209, 0.7);
-            }
-            70% {
-              box-shadow: 0 0 0 10px rgba(114, 46, 209, 0);
-            }
-            100% {
-              box-shadow: 0 0 0 0 rgba(114, 46, 209, 0);
-            }
-          }
-          
-          .training-animation {
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            background-size: 200% 100%;
-            animation: training-wave 2s linear infinite;
-          }
-          
-          @keyframes training-wave {
-            0% {
-              background-position: 100% 0;
-            }
-            100% {
-              background-position: -100% 0;
-            }
-          }
-          
-          .training-indicator {
-            animation: rotate 1.5s linear infinite;
-            display: inline-block;
           }
           
           @keyframes rotate {
@@ -150,10 +121,16 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
           
           .child-node:hover {
             transform: translateY(-2px);
+            box-shadow: ${isNewNode 
+              ? '0 6px 16px rgba(0, 0, 0, 0.12), inset 0 -2px 6px rgba(0, 0, 0, 0.02), inset 0 2px 6px rgba(0, 0, 0, 0.02)'
+              : '0 6px 16px rgba(19, 194, 194, 0.25), inset 0 -2px 6px rgba(255, 255, 255, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.2)'};
           }
           
           .child-node:active {
             transform: translateY(1px);
+            box-shadow: ${isNewNode
+              ? '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 -1px 4px rgba(0, 0, 0, 0.02), inset 0 1px 4px rgba(0, 0, 0, 0.02)'
+              : '0 2px 8px rgba(19, 194, 194, 0.15), inset 0 -1px 4px rgba(255, 255, 255, 0.2), inset 0 1px 4px rgba(255, 255, 255, 0.1)'};
           }
         `}
       </style>

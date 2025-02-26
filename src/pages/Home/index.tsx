@@ -10,7 +10,7 @@ import CustomArrow from './components/registerEdge/index';
 import Dagre from './components/tools/dagre';
 import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Button, Modal, Select } from 'antd';
 import { Pie as AntPie } from '@ant-design/charts';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
 import { PieChart, Pie, Cell, Legend, Tooltip, Label, ResponsiveContainer } from 'recharts';
 
 
@@ -77,6 +77,15 @@ const HomePage: React.FC = () => {
   const [showNodeDetails, setShowNodeDetails] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // 为每个类别存储单独的百分比
+  const [categoryPercentages, setCategoryPercentages] = useState({
+    Based: {},
+    Aigo: {},
+    Dataset: {},
+    Builder: {},
+    Validator: {},
+  });
 
   // 将函数定义移到这里，在使用之前
   const generate25DigitID = () => {
@@ -272,7 +281,7 @@ const HomePage: React.FC = () => {
           width: 140,
           height: 40,
           rawData: node,
-          isNewNode: node.nodeData.isNewNode, // 确保这个属性被传递
+          isNewNode: node.nodeData.isNewNode, // 确保这个属性被正确传递
           style: {
             fill: node.nodeData.isNewNode ? '#f5f0ff' : '#f0f2f5', // 为新节点设置不同的背景色
             stroke: node.nodeData.isNewNode ? '#722ed1' : '#1890ff', // 为新节点设置不同的边框色
@@ -283,7 +292,7 @@ const HomePage: React.FC = () => {
         text: {
           x,
           y,
-          value: node.nodeData.name + (node.nodeData.isNewNode ? ' 🔄' : ''), // 为新节点添加图标
+          value: node.nodeData.name + (node.nodeData.isNewNode ? ' Training ...' : ''), // 为新节点添加图标
         },
       };
 
@@ -708,54 +717,100 @@ const HomePage: React.FC = () => {
     );
   };
 
+  const initializeContributionData = (nodeName: string) => {
+    const nodeContributions = modelsContributions[nodeName]?.contributions || {};
+    
+    const newCategoryPercentages = {
+      Based: { [nodeName]: nodeContributions.Based || 0 },
+      Aigo: { [nodeName]: nodeContributions.AIGO || 0 },
+      Dataset: { [nodeName]: nodeContributions.DATASET || 0 },
+      Builder: { [nodeName]: nodeContributions.Builder || 0 },
+      Validator: { [nodeName]: nodeContributions.Validator || 0 },
+    };
+
+    // 如果是新节点且没有贡献数据，尝试从 nodeInfoData 获取
+    if (Object.values(nodeContributions).every(v => !v) && nodeInfoData?.contributions) {
+      newCategoryPercentages.Based[nodeName] = nodeInfoData.contributions.Based || 0;
+      newCategoryPercentages.Aigo[nodeName] = nodeInfoData.contributions.AIGO || 0;
+      newCategoryPercentages.Dataset[nodeName] = nodeInfoData.contributions.DATASET || 0;
+      newCategoryPercentages.Builder[nodeName] = nodeInfoData.contributions.Builder || 0;
+      newCategoryPercentages.Validator[nodeName] = nodeInfoData.contributions.Validator || 0;
+    }
+    
+    setCategoryPercentages(newCategoryPercentages);
+  };
+
   const handleContributionWeightClick = () => {
     if (!nodeInfoData) {
-        message.error('nodeInfoData is empty');
-        return;
+      message.error('nodeInfoData is empty');
+      return;
     }
 
-    const nodeNames = Object.keys(modelsContributions);
-
-    const initialPercentages = nodeNames.reduce((acc, name) => {
-        acc[name] = modelsContributions[name]?.contributions?.Based || 0;
-        
-        // 确保 Incentives 数组存在并且有元素
-        if (modelsContributions[name]?.Incentives?.length > 0) {
-            modelsContributions[name].Incentives[0].reward = `${random4Digits()}`;
-        } else {
-            // 如果 Incentives 不存在或为空，初始化它
-            modelsContributions[name].Incentives = [{
-                modelId: '',
-                name: `${name}.1`,
-                rate: '100%',
-                reward: `${random4Digits()}`,
-            }];
-        }
-        
-        return acc;
-    }, {});
-
-    setPercentages(initialPercentages);
+    // 初始化贡献数据
+    initializeContributionData(nodeInfoData.name);
     setIsModalVisible(true);
   };
 
   const handleModalOk = () => {
-    const total = Object.values(percentages).reduce((sum, value) => sum + value, 0);
-    if (total !== 100) {
-        message.error('Total must be 100%');
-        return;
+    if (!nodeInfoData?.name) return;
+
+    // 更新 modelsContributions
+    const updatedContributions = {
+      ...modelsContributions,
+      [nodeInfoData.name]: {
+        ...modelsContributions[nodeInfoData.name],
+        contributions: {
+          Based: categoryPercentages.Based[nodeInfoData.name] || 0,
+          AIGO: categoryPercentages.Aigo[nodeInfoData.name] || 0,
+          DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
+          Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
+          Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
+        }
+      }
+    };
+
+    // 更新节点的贡献值
+    const updateNodeInTree = (tree) => {
+      if (tree.nodeData.name === nodeInfoData.name) {
+        tree.nodeData.contributions = {
+          Based: categoryPercentages.Based[nodeInfoData.name] || 0,
+          AIGO: categoryPercentages.Aigo[nodeInfoData.name] || 0,
+          DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
+          Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
+          Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
+        };
+        return true;
+      }
+      
+      for (const child of tree.children) {
+        if (updateNodeInTree(child)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // 更新树中的节点数据
+    const updatedPrimitiveData = [...testPrimitiveData];
+    updatedPrimitiveData.forEach(tree => updateNodeInTree(tree));
+
+    // 更新状态
+    setModelsContributions(updatedContributions);
+    setTestPrimitiveData(updatedPrimitiveData);
+    
+    // 如果当前显示的节点信息就是被修改的节点，更新显示
+    if (nodeInfoData.name === nodeInfoData?.name) {
+      setNodeInfoData({
+        ...nodeInfoData,
+        contributions: updatedContributions[nodeInfoData.name].contributions
+      });
     }
 
-    // 更新每个节点的 Based 值
-    const updatedContributions = { ...modelsContributions };
-    Object.keys(percentages).forEach(nodeName => {
-        if (updatedContributions[nodeName]) {
-            updatedContributions[nodeName].contributions.Based = percentages[nodeName];
-        }
-    });
+    // 添加到手动修改的节点列表中
+    if (!manuallyModifiedNodes.includes(nodeInfoData.name)) {
+      setManuallyModifiedNodes([...manuallyModifiedNodes, nodeInfoData.name]);
+    }
 
-    modelsContributionsRef.current = updatedContributions;
-    setModelsContributions(updatedContributions);
     setIsModalVisible(false);
   };
 
@@ -797,87 +852,9 @@ const HomePage: React.FC = () => {
   const createNewNode = (parentNodeData) => {
     const newNodeId = generate25DigitID();
     const parentName = parentNodeData.name;
+    
+    const newNodeName = `${parentName}.${Math.floor(Math.random() * 10) + 1}`;
 
-    const existingChildNames = [];
-    const findExistingChildren = (tree, targetParentName) => {
-      if (tree.nodeData.name === targetParentName) {
-        tree.children.forEach(child => {
-          existingChildNames.push(child.nodeData.name);
-        });
-        return true;
-      }
-      
-      for (let i = 0; i < tree.children.length; i++) {
-        if (findExistingChildren(tree.children[i], targetParentName)) {
-          return true;
-        }
-      }
-      
-      return false;
-    };
-    
-    testPrimitiveData.forEach(tree => {
-      findExistingChildren(tree, parentName);
-    });
-    
-    let newNodeName;
-  
-    if (parentName === 'Base Model') {
-      const vNodes = [];
-      const collectVNodes = (tree) => {
-      const stack = [tree];
-      while (stack.length > 0) {
-        const node = stack.pop();
-          if (node.nodeData.name !== 'Base Model' && 
-              node.nodeData.name.match(/^V\d+$/)) { 
-            vNodes.push(node.nodeData.name);
-          }
-        node.children.forEach(child => stack.push(child));
-      }
-      };
-      
-      testPrimitiveData.forEach(tree => collectVNodes(tree));
-    
-      let maxVNumber = 0;
-      vNodes.forEach(name => {
-        const match = name.match(/^V(\d+)$/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxVNumber) {
-            maxVNumber = num;
-          }
-        }
-      });
-
-      newNodeName = `V${maxVNumber + 1}`;
-    } else if (parentName.includes('.')) {
-      let suffix = 1;
-      while (existingChildNames.includes(`${parentName}.${suffix}`)) {
-        suffix++;
-      }
-      newNodeName = `${parentName}.${suffix}`;
-    } else {
-      let suffix = 1;
-      while (existingChildNames.includes(`${parentName}.${suffix}`)) {
-        suffix++;
-      }
-      newNodeName = `${parentName}.${suffix}`;
-    }
-    
-    const parentContributions = parentNodeData.contributions;
-
-    const newBasedValue = Math.floor(parentContributions.Based / 2);
-    
-    const remainingValue = 100 - (newBasedValue + parentContributions.AIGO + parentContributions.Builder + parentContributions.Validator);
-    
-    const newContributions = {
-      Based: newBasedValue,
-      AIGO: parentContributions.AIGO,
-      DATASET: remainingValue,
-      Builder: parentContributions.Builder,
-      Validator: parentContributions.Validator,
-    };
-    
     const newNodeData = {
       nodeData: {
         nodeId: newNodeId,
@@ -886,11 +863,21 @@ const HomePage: React.FC = () => {
       },
       children: [],
     };
-    
+
+    console.log("Creating new node:", {
+      parentName,
+      newNodeName,
+      newNodeId
+    });
+
     const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));
     const addChildToNode = (node, parentName) => {
       if (node.nodeData.name === parentName) {
         node.children.push(newNodeData);
+        console.log("Added new node to parent:", {
+          parent: parentName,
+          newNode: newNodeData
+        }); // 添加日志
         return true;
       }
       
@@ -914,77 +901,21 @@ const HomePage: React.FC = () => {
       return;
     }
     
+    // 添加调试日志
+    console.log("Updated primitive data:", updatedPrimitiveData);
 
-    const newModelInfo = {
-      modelId: '',
-      name: newNodeName,
-      parentModel: parentName,
-      dataset: {
-        id: 'asdfasdfasdf',
-        name: 'clinical-data-50k',
-        contributors: [
-          { name: 'Alice', rate: '10%' },
-          { name: 'Bob', rate: '50%' },
-          { name: 'Charlie', rate: '40%' },
-        ],
-      },
-      training: {
-        id: 'asdfasdfasdf',
-        type: 'SFT',
-        author: 'Bob',
-        date: '2020-01-01',
-        fingerPrint: '0xdc93112d09a205d1caa35b3756b227392176bee8a1afd03cff51c51cd6c3423f',
-        accuracy: 0.8,
-      },
-      Incentives: [
-        {
-          modelId: '',
-          name: `${newNodeName}.3`,
-          rate: '15%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: `${newNodeName}.2`,
-          rate: '15%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: `${newNodeName}.1`,
-          rate: '20%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: newNodeName,
-          rate: '50%',
-          reward: `${random4Digits()}`,
-        },
-      ],
-      contributions: newContributions,
-    };
-    
-    const updatedContributions = {
-      ...modelsContributions,
-      [newNodeName]: {
-        ...newModelInfo,
-        isManuallyModified: true,
-        isNewNode: true
-      }
-    };
-    
     setTestPrimitiveData(updatedPrimitiveData);
-    setModelsContributions(updatedContributions);
-    const newTotalModels = countTotalNodes();
-    totalModelsRef.current = newTotalModels;
-    setInfoData(prev => ({
-      ...prev,
-      TotalModels: newTotalModels
-    }));
-    
+
     if (lf) {
       const { nodes, edges } = transformTreeToFlowData(updatedPrimitiveData);
+
+      nodes.forEach(node => {
+        if (node.id === newNodeId) {
+          node.text.value = newNodeName + " Traning ..."; // 只添加一个训练指示器
+        }
+      });
+    
+      console.log("Transformed flow data:", { nodes, edges });
       lf.render({ nodes, edges });
       // @ts-ignore
       lf?.extension.dagre.layout({
@@ -993,8 +924,6 @@ const HomePage: React.FC = () => {
       });
     }
     setManuallyModifiedNodes(prev => [...prev, newNodeName]);
-
-    // 设置一个定时器，在1小时后移除 isNewNode 标记
     setTimeout(() => {
       // 找到新创建的节点并更新其属性
       const node = lf.getNodeModelById(newNodeId);
@@ -1006,7 +935,7 @@ const HomePage: React.FC = () => {
       const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));
       const updateNodeInTree = (node) => {
         if (node.nodeData.nodeId === newNodeId) {
-          node.nodeData.isNewNode = false;
+          node.nodeData.isNewNode = false
           return true;
         }
         
@@ -1117,9 +1046,20 @@ const HomePage: React.FC = () => {
             color: '#1890ff',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: '8px' 
           }}>
             <span>Model Evolution</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              size="small"
+              onClick={() => setShowModelEvolution(false)}
+              style={{
+                color: '#999',
+                marginRight: '-8px',
+              }}
+            />
           </div>
         }
         style={{
@@ -1296,6 +1236,222 @@ const HomePage: React.FC = () => {
     }
   }, [modelsContributions]);
 
+  const ContributionWeightContent = () => {
+    const categories = ['Based', 'Aigo', 'Dataset', 'Builder', 'Validator'];
+    
+    // 获取节点的父节点路径
+    const getNodePath = (nodeName: string) => {
+      const path: string[] = [];
+      
+      const findParent = (name: string) => {
+        for (const tree of testPrimitiveData) {
+          const stack = [{node: tree, path: []}];
+          while (stack.length > 0) {
+            const {node, path: currentPath} = stack.pop()!;
+            if (node.nodeData.name === name) {
+              return {found: true, path: [...currentPath, name]};
+            }
+            for (const child of node.children) {
+              stack.push({node: child, path: [...currentPath, node.nodeData.name]});
+            }
+          }
+        }
+        return {found: false, path: []};
+      };
+
+      const result = findParent(nodeName);
+      if (result.found) {
+        path.push(...result.path);
+      } else {
+        path.push('base model');
+      }
+
+      return path;
+    };
+
+    // 计算每个父节点的分配百分比
+    const calculateParentPercentages = (path: string[], category: string) => {
+      const totalNodes = path.length;
+      const percentagePerNode = totalNodes <= 1 ? 5 : Math.floor(5 / (totalNodes - 1));
+      
+      return path.map((node, index) => {
+        if (index === path.length - 1) return 0; // 当前节点不分配百分比
+        return percentagePerNode;
+      });
+    };
+
+    // 根据路径生成树形显示
+    const getTreeDisplay = (category: string) => {
+      if (!nodeInfoData?.name) return '';
+      const path = getNodePath(nodeInfoData.name);
+      const parentPercentages = calculateParentPercentages(path, category);
+      
+      return path.map((node, index) => {
+        const percentage = index === path.length - 1 
+          ? categoryPercentages[category][nodeInfoData.name] || 0
+          : parentPercentages[index];
+        
+        // 即使是 base model 也添加缩进
+        return `${'-'.repeat(index)}${node === 'base model' ? '-' : ''}${node} (${percentage}%)`;
+      }).join('\n');
+    };
+
+    // 处理单个类别的百分比变化
+    const handleCategoryChange = (value: number, category: string) => {
+      if (!nodeInfoData?.name) return;
+
+      const path = getNodePath(nodeInfoData.name);
+      const parentPercentages = calculateParentPercentages(path, category);
+      const totalParentPercentage = parentPercentages.reduce((sum, p) => sum + p, 0);
+
+      // 检查是否超过可用百分比（100 - 父节点总百分比）
+      if (value > (100 - totalParentPercentage)) {
+        message.error(`Maximum available percentage is ${100 - totalParentPercentage}%`);
+        return;
+      }
+
+      const newCategoryPercentages = {
+        ...categoryPercentages,
+        [category]: {
+          ...categoryPercentages[category],
+          [nodeInfoData.name]: value
+        }
+      };
+      setCategoryPercentages(newCategoryPercentages);
+    };
+
+    // 计算总百分比（包括父节点的百分比）
+    const getTotalPercentage = () => {
+      if (!nodeInfoData?.name) return 0;
+      
+      let total = 0;
+      categories.forEach(category => {
+        const path = getNodePath(nodeInfoData.name);
+        const parentPercentages = calculateParentPercentages(path, category);
+        const parentTotal = parentPercentages.reduce((sum, p) => sum + p, 0);
+        total += parentTotal + (categoryPercentages[category][nodeInfoData.name] || 0);
+      });
+      
+      return total;
+    };
+
+    // 检查是否可以确认
+    const canConfirm = getTotalPercentage() === 100;
+
+    return (
+      <div style={{ 
+        backgroundColor: '#fafafa',
+        padding: '16px',
+        borderRadius: '8px',
+      }}>
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: '120px 90px 1fr',
+          gap: '24px', // 增加间距
+          marginBottom: '12px',
+          fontWeight: 'bold',
+          color: '#666'
+        }}>
+          <span>Category</span>
+          <span style={{textAlign: 'center'}}>Weight</span>
+          <span style={{paddingLeft: '20px'}}>Distribution</span> {/* 添加左边距 */}
+        </div>
+
+        {categories.map(category => {
+          const path = getNodePath(nodeInfoData?.name || '');
+          const parentPercentages = calculateParentPercentages(path, category);
+          const totalParentPercentage = parentPercentages.reduce((sum, p) => sum + p, 0);
+          const maxAvailable = 100 - totalParentPercentage;
+
+          return (
+            <div key={category} style={{ 
+              display: 'grid',
+              gridTemplateColumns: '120px 90px 1fr',
+              gap: '24px', // 增加间距
+              marginBottom: '12px',
+              alignItems: 'center'
+            }}>
+              <span style={{
+                fontWeight: 500,
+                color: '#5B8FF9',
+              }}>{category}</span>
+              
+              <Select
+                value={categoryPercentages[category][nodeInfoData?.name || ''] || 0}
+                onChange={(value) => handleCategoryChange(value, category)}
+                style={{ width: 90 }}
+                status={!canConfirm ? 'error' : undefined}
+              >
+                {Array.from({ length: Math.floor(maxAvailable / 5) + 1 }, (_, i) => i * 5).map((value) => (
+                  <Select.Option key={value} value={value}>
+                    {value}%
+                  </Select.Option>
+                ))}
+              </Select>
+
+              <div style={{
+                fontFamily: 'monospace',
+                whiteSpace: 'pre',
+                color: '#666',
+                fontSize: '13px',
+                paddingLeft: '20px' // 添加左边距
+              }}>
+                {getTreeDisplay(category)}
+              </div>
+            </div>
+          );
+        })}
+
+        <div style={{
+          marginTop: '16px',
+          color: !canConfirm ? '#ff4d4f' : '#52c41a',
+          textAlign: 'right'
+        }}>
+          Total: {getTotalPercentage()}%
+          {!canConfirm && <span style={{marginLeft: '8px'}}>Must be 100%</span>}
+        </div>
+      </div>
+    );
+  };
+
+  const renderShowButtons = () => (
+    <div style={{
+      position: 'absolute',
+      top: '10px',
+      right: '10px',
+      display: 'flex',
+      gap: '8px',
+      zIndex: 1,
+    }}>
+      {!showModelEvolution && (
+        <Button
+          type="primary"
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => setShowModelEvolution(true)}
+          style={{
+            borderRadius: '4px',
+          }}
+        >
+          Show Evolution
+        </Button>
+      )}
+      {!showNodeDetails && (
+        <Button
+          type="primary"
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => setShowNodeDetails(true)}
+          style={{
+            borderRadius: '4px',
+          }}
+        >
+          Show Details
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <PageContainer
       pageHeaderRender={false}
@@ -1387,26 +1543,46 @@ const HomePage: React.FC = () => {
       {showNodeDetails && (
       <Card
         size={'small'}
+        title={
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span>Node Details</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              size="small"
+              onClick={() => setShowNodeDetails(false)}
+              style={{
+                color: '#999',
+              }}
+            />
+          </div>
+        }
         style={{
           position: 'absolute',
-            top: '10px',
+          top: '10px',
           right: '10px',
-            width: '300px',
-            height: '450px',
-            zIndex: 2,
-            overflow: 'hidden',
-            borderRadius: '12px',
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
-            backgroundColor: '#ffffff',
-            padding: '16px',
-          }}
-        >
-          {renderNodeDetails(nodeInfoData)}
-          <div style={{ height: '250px', marginTop: '10px' }}> 
-            {renderContributionPieChart(nodeInfoData)}
-          </div>
-        </Card>
+          width: '300px',
+          height: '480px',
+          zIndex: 2,
+          overflow: 'hidden',
+          borderRadius: '12px',
+          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
+          backgroundColor: '#ffffff',
+          padding: '16px',
+        }}
+      >
+        {renderNodeDetails(nodeInfoData)}
+        <div style={{ height: '250px', marginTop: '10px' }}> 
+          {renderContributionPieChart(nodeInfoData)}
+        </div>
+      </Card>
       )}
+
+      {renderShowButtons()}
 
       <Modal
         title={
@@ -1421,7 +1597,7 @@ const HomePage: React.FC = () => {
         visible={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={480}
+        width={600}
         centered
         bodyStyle={{
           padding: '16px',
@@ -1450,136 +1626,7 @@ const HomePage: React.FC = () => {
         <div style={{ marginBottom: '16px', color: '#666' }}>
           Total must be 100%
         </div>
-        
-        <div style={{ 
-          backgroundColor: '#fafafa',
-          padding: '16px',
-          borderRadius: '8px',
-        }}>
-          {/* 添加表头，使布局更清晰 */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            marginBottom: '12px',
-            fontWeight: 'bold',
-            color: '#666'
-          }}>
-            <span style={{ width: '120px' }}>Model</span>
-            <span style={{ width: '90px', textAlign: 'center' }}>Percentage</span>
-            <span style={{ width: '80px', textAlign: 'center' }}>Reward</span>
-          </div>
-
-          {/* 首先单独渲染 Base Model */}
-          {modelsContributions['Base Model'] && (
-            <div key="Base Model" style={{ marginBottom: '12px' }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginBottom: '4px',
-                alignItems: 'center'
-              }}>
-                <span style={{ 
-                  fontWeight: 500, 
-                  color: '#5B8FF9',
-                  width: '120px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>Base Model</span>
-                <div style={{ width: '90px', textAlign: 'center' }}>
-                  <Select
-                    value={percentages['Base Model']}
-                    onChange={(value) => handlePercentageChange(value, 'Base Model')}
-                    style={{ width: 90 }}
-                  >
-                    {/* 生成0到100之间的数字，步长为5 */}
-                    {Array.from({ length: 21 }, (_, i) => i * 5).map((value) => (
-                      <Select.Option key={value} value={value}>
-                        {value}%
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </div>
-                <span style={{ 
-                  fontWeight: 500, 
-                  color: '#5B8FF9',
-                  width: '80px',
-                  textAlign: 'center'
-                }}>
-                  {modelsContributions['Base Model']?.Incentives?.[0]?.reward || 'N/A'}
-                </span>
-              </div>
-            </div>
-          )}
-          
-          {/* 然后渲染其他所有节点，使用相同的布局结构 */}
-          {Object.keys(modelsContributions)
-            .filter(nodeName => nodeName !== 'Base Model')
-            .map(nodeName => {
-              const node = modelsContributions[nodeName];
-              const incentives = node.Incentives || [];
-              return (
-                <div key={nodeName} style={{ marginBottom: '12px' }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    marginBottom: '4px',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ 
-                      fontWeight: 500, 
-                      color: '#5B8FF9',
-                      width: '120px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>{nodeName}</span>
-                    <div style={{ width: '90px', textAlign: 'center' }}>
-                      <Select
-                        value={percentages[nodeName]}
-                        onChange={(value) => handlePercentageChange(value, nodeName)}
-                        style={{ width: 90 }}
-                      >
-                        {/* 生成0到100之间的数字，步长为5 */}
-                        {Array.from({ length: 21 }, (_, i) => i * 5).map((value) => (
-                          <Select.Option key={value} value={value}>
-                            {value}%
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </div>
-                    <span style={{ 
-                      fontWeight: 500, 
-                      color: '#5B8FF9',
-                      width: '80px',
-                      textAlign: 'center'
-                    }}>
-                      {incentives[0]?.reward || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-
-        <div style={{ 
-          marginTop: '16px',
-          padding: '12px 16px',
-          backgroundColor: '#fafafa',
-          borderRadius: '8px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <span style={{ color: '#666' }}>Current Total:</span>
-          <span style={{ 
-            color: Object.values(percentages).reduce((sum, value) => sum + value, 0) === 100 ? '#52c41a' : '#ff4d4f',
-            fontWeight: 500,
-            fontSize: '16px',
-          }}>
-            {Object.values(percentages).reduce((sum, value) => sum + value, 0)}%
-          </span>
-        </div>
+        <ContributionWeightContent />
       </Modal>
     </PageContainer>
   );

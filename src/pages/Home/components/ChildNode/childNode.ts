@@ -39,29 +39,37 @@ export function registerChildNode(lf: LogicFlow) {
         },
       ];
       
-      // 处理 isNewNode 属性
-      if (data.properties && data.properties.isNewNode) {
-        // 可以在这里设置新节点的特殊样式属性
-        this.setProperties({
-          ...this.properties,
-          isNewNode: true,
-          style: {
-            fill: '#f5f0ff',
-            stroke: '#722ed1',
-            strokeWidth: 3,
-            radius: 8,
-          }
-        });
-        
-        // 如果需要，可以修改文本
-        if (this.text && this.text.value) {
-          this.text.value = `${this.text.value} 🔄`;
-        }
+      // 确保 properties 存在
+      if (!this.properties) {
+        this.properties = {};
       }
+
+      // 从数据中获取 isNewNode
+      const isNewNode = data.properties?.isNewNode;
+      
+      // 设置节点属性
+      this.setProperties({
+        ...this.properties,
+        isNewNode: isNewNode, // 明确设置 isNewNode
+        style: isNewNode ? {
+          fill: '#f5f0ff',
+          stroke: '#722ed1',
+          strokeWidth: 3,
+          radius: 8,
+        } : {
+          fill: '#f0f2f5',
+          stroke: '#1890ff',
+          strokeWidth: 2,
+          radius: 8,
+        }
+      });
+      
+      
     }
     
     // 添加一个方法来更新节点的训练状态
     updateTrainingStatus(isTraining: boolean) {
+      console.log(" isTraining=",isTraining)
       this.setProperties({
         ...this.properties,
         isNewNode: isTraining,
@@ -78,11 +86,6 @@ export function registerChildNode(lf: LogicFlow) {
         }
       });
       
-      // 更新文本
-      if (this.text && this.text.value) {
-        const baseText = this.text.value.replace(' 🔄', '');
-        this.text.value = isTraining ? `${baseText} 🔄` : baseText;
-      }
       
       return this;
     }
