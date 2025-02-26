@@ -412,7 +412,7 @@ const HomePage: React.FC = () => {
       }
       
       const nodeId = data?.data?.id;
-      const nodeName = data?.data?.properties?.rawData?.nodeData?.name;
+      const nodeName = "Base Model";
       if (!nodeName) {
         message.error('cannot get node info');
         return;
