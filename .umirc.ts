@@ -3,7 +3,7 @@ import { defineConfig } from '@umijs/max';
 export default defineConfig({
   base: '/',
   publicPath: '/',
-  title: 'agentic-chat',
+  title: 'Hetu ModelGraph',
   history: { type: 'browser' },
   antd: {},
   access: {},

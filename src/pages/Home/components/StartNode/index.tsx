@@ -53,7 +53,7 @@ const StartNode: React.FC<ReactNodeProps> = () => {
           gap: '8px',
         }}
       >
-        {/* 图标 */}
+        {/* 图标
         <div
           style={{
             width: '6px',
@@ -62,7 +62,7 @@ const StartNode: React.FC<ReactNodeProps> = () => {
             backgroundColor: 'rgba(255, 255, 255, 0.8)',
             boxShadow: '0 0 8px rgba(255, 255, 255, 0.6)',
           }}
-        />
+        /> */}
         {/* 文本 */}
         <span
           style={{
@@ -73,7 +73,7 @@ const StartNode: React.FC<ReactNodeProps> = () => {
             letterSpacing: '0.5px',
           }}
         >
-          Base Model
+          
         </span>
       </div>
 

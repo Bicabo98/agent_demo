@@ -11,6 +11,29 @@ import Dagre from './components/tools/dagre';
 import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Button, Modal, Select } from 'antd';
 import { Pie as AntPie } from '@ant-design/charts';
 import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { PieChart, Pie, Cell, Legend, Tooltip, Label, ResponsiveContainer } from 'recharts';
+
+
+const getRandomAlgorithm = () => {
+  const algorithms = [
+    'Transformer', 'BERT', 'GPT', 'LSTM', 'CNN', 
+  ];
+  return algorithms[Math.floor(Math.random() * algorithms.length)];
+};
+
+const getRandomDataset = () => {
+  const datasets = [
+    'ImageNet', 'COCO', 'CIFAR-10', 'MNIST', 'WikiText',
+  ];
+  return datasets[Math.floor(Math.random() * datasets.length)];
+};
+
+const getRandomBuilder = () => {
+  const builders = [
+    'DeepMind', 'OpenAI', 'Google Research', 'Facebook AI', 'Microsoft Research',
+  ];
+  return builders[Math.floor(Math.random() * builders.length)];
+};
 
 const HomePage: React.FC = () => {
   const refContainer = useRef(null);
@@ -30,10 +53,10 @@ const HomePage: React.FC = () => {
   const [currentModelContributions, setCurrentModelContributions] = useState(null);
   const infoDefaultData: any = {
     TotalModels: 5,
-    DataSets: 14,
-    LaunchedModels: 0,
+    DataSets: 3,
+    LaunchedModels: 3,
     Validator:10,
-    Builder: 5,
+    Builder: 4,
   };
   const [modelsContributions, setModelsContributions] = useState<{[key: string]: any}>({});
   const [baseContribution, setBaseContribution] = useState({
@@ -53,6 +76,7 @@ const HomePage: React.FC = () => {
   const totalModelsRef = useRef(5);
   const [showNodeDetails, setShowNodeDetails] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // 将函数定义移到这里，在使用之前
   const generate25DigitID = () => {
@@ -72,7 +96,7 @@ const HomePage: React.FC = () => {
     {
       nodeData: {
         nodeId: generate25DigitID(),
-        name: '',
+        name: 'Base Model',
       },
       children: [
         {
@@ -181,6 +205,34 @@ const HomePage: React.FC = () => {
       },
     };
 
+    // 确保每个节点都有 Incentives 数据
+    const incentives = [
+      {
+        modelId: '',
+        name: `${model?.name}.3`,
+        rate: '15%',
+        reward: `${random4Digits()}`,
+      },
+      {
+        modelId: '',
+        name: `${model?.name}.2`,
+        rate: '15%',
+        reward: `${random4Digits()}`,
+      },
+      {
+        modelId: '',
+        name: `${model?.name}.1`,
+        rate: '20%',
+        reward: `${random4Digits()}`,
+      },
+      {
+        modelId: '',
+        name: model?.name,
+        rate: '50%',
+        reward: `${random4Digits()}`,
+      },
+    ];
+
     return {
       modelId: '',
       name: model?.name,
@@ -188,32 +240,7 @@ const HomePage: React.FC = () => {
                   model?.name.startsWith('V2.') ? 'V2' : 
                   'Base Model',
       ...commonData, 
-      Incentives: [
-        {
-          modelId: '',
-          name: `${model?.name}.3`,
-          rate: '15%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: `${model?.name}.2`,
-          rate: '15%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: `${model?.name}.1`,
-          rate: '20%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: model?.name,
-          rate: '50%',
-          reward: `${random4Digits()}`,
-        },
-      ],
+      Incentives: incentives, // 确保 Incentives 被正确设置
       contributions: contributionData,
     };
   };
@@ -363,6 +390,8 @@ const HomePage: React.FC = () => {
         }
 
         setSelectedNodeId(nodeId);
+
+        console.log("测试点击1 =",manuallyModifiedNodes)
         
         let modelInfo;
         const isModified = manuallyModifiedNodes.includes(nodeName);
@@ -406,6 +435,7 @@ const HomePage: React.FC = () => {
     });
 
     logicFlow.on('node:dbclick', (data) => {
+      console.log("测试双击1")
       if (clickTimer) {
         clearTimeout(clickTimer);
         clickTimer = null;
@@ -552,10 +582,17 @@ const HomePage: React.FC = () => {
       DATASET: '#5D7092',
       Builder: '#F6BD16',
       Validator: '#E8684A',
+      ModelName: '#0056b3',
     };
 
     return (
       <Descriptions size={'small'} column={1}>
+        <Descriptions.Item label={<span style={{ color: colorMap.ModelName }}>Model Name</span>}>
+          <span style={{ color: colorMap.ModelName }}>
+            {nodeData?.name}
+          </span>
+        </Descriptions.Item>
+
         <Descriptions.Item label={<span style={{ color: colorMap.Based }}>Based</span>}>
           <span style={{ color: colorMap.Based }}>
             {nodeData?.contributions?.Based}%
@@ -587,120 +624,138 @@ const HomePage: React.FC = () => {
 
   const renderContributionPieChart = (nodeData) => {
     if (!nodeData || !nodeData.contributions) {
-        console.log("No contributions data available");
-        return null;
+      console.log("No contributions data available");
+      return null;
     }
 
     const data = [
-        { type: 'Based', value: parseInt(nodeData.contributions.Based, 10) || 0 },
-        { type: 'AIGO', value: parseInt(nodeData.contributions.AIGO, 10) || 0 },
-        { type: 'DATASET', value: parseInt(nodeData.contributions.DATASET, 10) || 0 },
-        { type: 'Builder', value: parseInt(nodeData.contributions.Builder, 10) || 0 },
-        { type: 'Validator', value: parseInt(nodeData.contributions.Validator, 10) || 0 },
+      { name: 'Based', value: parseInt(nodeData.contributions.Based, 10) || 0 },
+      { name: 'AIGO', value: parseInt(nodeData.contributions.AIGO, 10) || 0 },
+      { name: 'DATASET', value: parseInt(nodeData.contributions.DATASET, 10) || 0 },
+      { name: 'Builder', value: parseInt(nodeData.contributions.Builder, 10) || 0 },
+      { name: 'Validator', value: parseInt(nodeData.contributions.Validator, 10) || 0 },
     ];
-    const config = {
-        appendPadding: 10,
-        data,
-        angleField: 'value',
-        colorField: 'type',
-        radius: 0.8,
-        label: {
-            type: 'outer',
-            content: ({ percent, type }) => `${type}: ${(percent * 100).toFixed(0)}%`,
-            style: {
-                fontSize: 12,
-                textAlign: 'center',
-            },
-        },
-        legend: {
-            position: 'bottom',
-        },
+
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+    const total = data.reduce((a, b) => a + b.value, 0);
+
+    // 简洁的内部百分比标签
+    const renderCustomizedInnerLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+      const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+      const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+      
+      if (percent < 0.05) return null;
+      
+      return (
+        <text 
+          x={x} 
+          y={y} 
+          fill="white" 
+          textAnchor="middle" 
+          dominantBaseline="central"
+          style={{ 
+            fontWeight: 'bold', 
+            fontSize: percent > 0.1 ? '16px' : '12px',
+            textShadow: '0px 0px 2px rgba(0,0,0,0.7)'
+          }}
+        >
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      );
     };
 
-    return <AntPie {...config} />;
+    return (
+      <div style={{ 
+        width: '100%', 
+        height: 300, 
+        display: 'flex',
+        justifyContent: 'center' // 居中显示
+      }}>
+        {/* 增加容器宽度 */}
+        <div style={{ width: '80%', height: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={renderCustomizedInnerLabel}
+                outerRadius={90}
+                innerRadius={45}
+                fill="#8884d8"
+                dataKey="value"
+                paddingAngle={2}
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip 
+                formatter={(value, name) => [`${(value / total * 100).toFixed(0)}%`, name]} 
+              />
+              <Legend 
+                layout="horizontal" 
+                align="center" 
+                verticalAlign="bottom"
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
   };
 
   const handleContributionWeightClick = () => {
     if (!nodeInfoData) {
-      message.error('nodeInfoData is empty');
-      return;
-    }
-    
-    if (!nodeInfoData.name) {
-      message.error('nodeInfoData.name is empty');
-      return;
-    }
-    
-    if (!nodeInfoData.contributions) {
-      message.error('nodeInfoData.contributions is empty');
-      return;
+        message.error('nodeInfoData is empty');
+        return;
     }
 
-    setPercentages({
-      Based: nodeInfoData.contributions.Based || 0,
-      AIGO: nodeInfoData.contributions.AIGO || 0,
-      DATASET: nodeInfoData.contributions.DATASET || 0,
-      Builder: nodeInfoData.contributions.Builder || 0,
-      Validator: nodeInfoData.contributions.Validator || 0,
-    });
-    
+    const nodeNames = Object.keys(modelsContributions);
+
+    const initialPercentages = nodeNames.reduce((acc, name) => {
+        acc[name] = modelsContributions[name]?.contributions?.Based || 0;
+        
+        // 确保 Incentives 数组存在并且有元素
+        if (modelsContributions[name]?.Incentives?.length > 0) {
+            modelsContributions[name].Incentives[0].reward = `${random4Digits()}`;
+        } else {
+            // 如果 Incentives 不存在或为空，初始化它
+            modelsContributions[name].Incentives = [{
+                modelId: '',
+                name: `${name}.1`,
+                rate: '100%',
+                reward: `${random4Digits()}`,
+            }];
+        }
+        
+        return acc;
+    }, {});
+
+    setPercentages(initialPercentages);
     setIsModalVisible(true);
   };
 
   const handleModalOk = () => {
     const total = Object.values(percentages).reduce((sum, value) => sum + value, 0);
     if (total !== 100) {
-        message.error('total is not 100');
+        message.error('Total must be 100%');
         return;
     }
 
-    if (!nodeInfoData || !nodeInfoData.name) {
-        message.error('nodeInfoData or nodeInfoData.name is empty');
-        return;
-    }
+    // 更新每个节点的 Based 值
+    const updatedContributions = { ...modelsContributions };
+    Object.keys(percentages).forEach(nodeName => {
+        if (updatedContributions[nodeName]) {
+            updatedContributions[nodeName].contributions.Based = percentages[nodeName];
+        }
+    });
 
-    const nodeName = nodeInfoData.name;
-    const updatedNodeInfo = JSON.parse(JSON.stringify(nodeInfoData));
-    updatedNodeInfo.contributions = {...percentages};
-    updatedNodeInfo.isManuallyModified = true;
-    const updatedContributions = {
-      ...modelsContributions,
-      [nodeName]: updatedNodeInfo
-    };
-    
     modelsContributionsRef.current = updatedContributions;
     setModelsContributions(updatedContributions);
-
-    let updatedModifiedNodes = [...manuallyModifiedNodes];
-    if (!manuallyModifiedNodes.includes(nodeName)) {
-      updatedModifiedNodes = [...manuallyModifiedNodes, nodeName];
-      setManuallyModifiedNodes(updatedModifiedNodes);
-    }
-
-    if (nodeName === 'Base Model') {
-      setBaseContribution({...percentages});
-      baseContributionRef.current = {...percentages};
-    }
-    
-    setNodeInfoData(updatedNodeInfo);
     setIsModalVisible(false);
-    
-   
-    // setTimeout(() => {
-
-    //   if (JSON.stringify(modelsContributions[nodeName]?.contributions) !== 
-    //       JSON.stringify(percentages)) {
-
-    //     console.log("期望的贡献数据:", percentages);
-    //     console.log("实际的贡献数据:", modelsContributions[nodeName]?.contributions);
-    //     console.log("ref中的贡献数据:", modelsContributionsRef.current[nodeName]?.contributions);
-        
-    //     // 尝试强制更新
-    //     forceUpdateModelsContributions();
-    //   }
-    // }, 1000);
-
-
   };
 
   const handleModalCancel = () => {
@@ -709,9 +764,16 @@ const HomePage: React.FC = () => {
 
   const handlePercentageChange = (value: number, key: string) => {
     setPercentages((prev) => ({
-      ...prev,
-      [key]: value,
+        ...prev,
+        [key]: value,
     }));
+
+    // 更新对应节点的 reward 值
+    const updatedContributions = { ...modelsContributions };
+    if (updatedContributions[key]) {
+        updatedContributions[key].Incentives[0].reward = `${random4Digits()}`;
+    }
+    setModelsContributions(updatedContributions);
   };
 
 
@@ -724,18 +786,11 @@ const HomePage: React.FC = () => {
   }, [baseContribution]);
 
   const handleStartButtonClick = (nodeData) => {
-    setCountdownNodeId(nodeData.name);
-    setCountdown(5);
-    const timer = setInterval(() => {
-      setCountdown((prevCount) => {
-        if (prevCount <= 1) {
-          clearInterval(timer);
-          createNewNode(nodeData);
-          return 0;
-        }
-        return prevCount - 1;
-      });
-    }, 1000);
+    setIsAnimating(true);
+    setTimeout(() => {
+      createNewNode(nodeData);
+      setIsAnimating(false);
+    }, 5000); // 动画持续时间为5秒
   };
 
   const createNewNode = (parentNodeData) => {
@@ -1070,13 +1125,26 @@ const HomePage: React.FC = () => {
                 {nodeInfoData?.name}
               </Descriptions.Item>
               <Descriptions.Item label='Model Algorithm'>
-                SFT
+                <Select defaultValue="SFT" style={{ width: '150px' }}>
+                  <Select.Option value="SFT">SFT</Select.Option>
+                  <Select.Option value="Algorithm 2">Algorithm 2</Select.Option>
+                  <Select.Option value="Algorithm 3">Algorithm 3</Select.Option>
+                </Select>
               </Descriptions.Item>
               <Descriptions.Item label='Dataset'>
-                clinical-data-50k
+                <Select defaultValue="clinical-data-50k" style={{ width: '150px' }}>
+                  <Select.Option value="clinical-data-50k">clinical-data-50k</Select.Option>
+                  <Select.Option value="dataset-100k">dataset-100k</Select.Option>
+                  <Select.Option value="dataset-200k">dataset-200k</Select.Option>
+                </Select>
               </Descriptions.Item>
-              <Descriptions.Item label='Contributors'>
-                Alice, Bob, Charlie
+              <Descriptions.Item label='Builder'>
+                <Select mode="multiple" defaultValue={['Alice', 'Bob']} style={{ width: '100%' }}>
+                  <Select.Option value="Alice">Alice</Select.Option>
+                  <Select.Option value="Bob">Bob</Select.Option>
+                  <Select.Option value="Charlie">Charlie</Select.Option>
+                  <Select.Option value="David">David</Select.Option>
+                </Select>
               </Descriptions.Item>
             </Descriptions>
           </Col>
@@ -1103,7 +1171,8 @@ const HomePage: React.FC = () => {
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              position: 'relative',
             }}>
               <Button 
                 type="default" 
@@ -1115,22 +1184,30 @@ const HomePage: React.FC = () => {
                   fontWeight: 500,
                   fontSize: '13px',
                   borderColor: '#1890ff',
-                  color: '#1890ff',
+                  color: isAnimating ? '#ffffff' : '#1890ff',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  zIndex: 1,
                 }}
                 onClick={() => handleStartButtonClick(nodeInfoData)}
-                disabled={countdown > 0 && countdownNodeId === nodeInfoData.name}
+                disabled={isAnimating}
               >
                 Train
+                {isAnimating && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: '#1890ff',
+                      zIndex: -1,
+                      animation: 'fillAnimation 5s linear forwards'
+                    }}
+                  />
+                )}
               </Button>
-              {countdown > 0 && countdownNodeId === nodeInfoData.name && (
-                <span style={{ 
-                  fontWeight: 'bold',
-                  color: '#1890ff',
-                  fontSize: '14px'
-                }}>
-                  {countdown}s
-                </span>
-              )}
             </div>
           </Col>
         </Row>
@@ -1187,6 +1264,27 @@ const HomePage: React.FC = () => {
       className='homeContent'
       style={{ padding: '20px', background: '#f0f2f5' }}
     >
+      <style>
+        {`
+          @keyframes fillAnimation {
+            0% {
+              transform: translateX(-100%);
+            }
+            100% {
+              transform: translateX(0);
+            }
+          }
+              background-position: 0 0;
+            }
+          }
+
+          .train-button {
+            background: linear-gradient(270deg, #1890ff, #1890ff);
+            background-size: 200% 100%;
+            animation: fillAnimation 5s linear forwards;
+          }
+        `}
+      </style>
       <div
         className={styles.ModelFlow}
         ref={refContainer}
@@ -1200,26 +1298,27 @@ const HomePage: React.FC = () => {
           left: '10px',
           width: '220px',
           borderRadius: '12px',
-          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
-          backgroundColor: '#ffffff',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+          background: 'linear-gradient(135deg, #f0f2f5, #e6f7ff)', // 渐变背景
           padding: '16px',
+          border: 'none',
         }}
       >
         <Descriptions size={'small'} column={1}>
-          <Descriptions.Item label='TotalModels'>
-            {totalModelsRef.current}
+          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Total Models</span>}>
+            <span style={{ color: '#0056b3', fontWeight: 500 }}>{totalModelsRef.current}</span>
           </Descriptions.Item>
-          <Descriptions.Item label='DataSets'>
-            {infoData?.DataSets}
+          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Data Sets</span>}>
+            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.DataSets}</span>
           </Descriptions.Item>
-          <Descriptions.Item label='LaunchedModels'>
-            {infoData?.LaunchedModels}
+          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Launched Models</span>}>
+            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.LaunchedModels}</span>
           </Descriptions.Item>
-          <Descriptions.Item label='Validator'>
-            {infoData?.Validator}
+          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Validator</span>}>
+            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.Validator}</span>
           </Descriptions.Item>
-          <Descriptions.Item label='Builder'>
-            {infoData?.Builder}
+          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Builder</span>}>
+            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.Builder}</span>
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -1242,7 +1341,6 @@ const HomePage: React.FC = () => {
             backgroundColor: '#ffffff',
             padding: '16px',
           }}
-          
         >
           {renderNodeDetails(nodeInfoData)}
           <div style={{ height: '250px', marginTop: '10px' }}> 
@@ -1299,61 +1397,110 @@ const HomePage: React.FC = () => {
           padding: '16px',
           borderRadius: '8px',
         }}>
-          {Object.keys(percentages).map((key) => (
-            <div 
-              key={key} 
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '12px',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                width: '50%',
-                gap: '12px',
+          {/* 添加表头，使布局更清晰 */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            marginBottom: '12px',
+            fontWeight: 'bold',
+            color: '#666'
+          }}>
+            <span style={{ width: '120px' }}>Model</span>
+            <span style={{ width: '90px', textAlign: 'center' }}>Percentage</span>
+            <span style={{ width: '80px', textAlign: 'center' }}>Reward</span>
+          </div>
+
+          {/* 首先单独渲染 Base Model */}
+          {modelsContributions['Base Model'] && (
+            <div key="Base Model" style={{ marginBottom: '12px' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                marginBottom: '4px',
+                alignItems: 'center'
               }}>
                 <span style={{ 
+                  fontWeight: 500, 
+                  color: '#5B8FF9',
+                  width: '120px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>Base Model</span>
+                <div style={{ width: '90px', textAlign: 'center' }}>
+                  <Select
+                    value={percentages['Base Model']}
+                    onChange={(value) => handlePercentageChange(value, 'Base Model')}
+                    style={{ width: 90 }}
+                  >
+                    {/* 生成0到100之间的数字，步长为5 */}
+                    {Array.from({ length: 21 }, (_, i) => i * 5).map((value) => (
+                      <Select.Option key={value} value={value}>
+                        {value}%
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+                <span style={{ 
+                  fontWeight: 500, 
+                  color: '#5B8FF9',
                   width: '80px',
-                  color: key === 'Based' ? '#5B8FF9' :
-                         key === 'AIGO' ? '#5AD8A6' :
-                         key === 'DATASET' ? '#5D7092' :
-                         key === 'Builder' ? '#F6BD16' :
-                         '#E8684A',
-                  fontWeight: 500,
+                  textAlign: 'center'
                 }}>
-                  {key}
-                </span>
-                <Select
-                  value={percentages[key]}
-                  onChange={(value) => handlePercentageChange(value, key)}
-                  style={{ width: 90 }}
-                >
-                  {Array.from({ length: 11 }, (_, i) => i * 10).map((value) => (
-                    <Select.Option key={value} value={value}>
-                      {value}%
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}>
-                <span style={{ color: '#666' }}>Reward:</span>
-                <span style={{ 
-                  color: '#1890ff',
-                  fontSize: '14px',
-                  minWidth: '60px',
-                }}>
-                  {random4Digits()}
+                  {modelsContributions['Base Model']?.Incentives?.[0]?.reward || 'N/A'}
                 </span>
               </div>
             </div>
-          ))}
+          )}
+          
+          {/* 然后渲染其他所有节点，使用相同的布局结构 */}
+          {Object.keys(modelsContributions)
+            .filter(nodeName => nodeName !== 'Base Model')
+            .map(nodeName => {
+              const node = modelsContributions[nodeName];
+              const incentives = node.Incentives || [];
+              return (
+                <div key={nodeName} style={{ marginBottom: '12px' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    marginBottom: '4px',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ 
+                      fontWeight: 500, 
+                      color: '#5B8FF9',
+                      width: '120px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>{nodeName}</span>
+                    <div style={{ width: '90px', textAlign: 'center' }}>
+                      <Select
+                        value={percentages[nodeName]}
+                        onChange={(value) => handlePercentageChange(value, nodeName)}
+                        style={{ width: 90 }}
+                      >
+                        {/* 生成0到100之间的数字，步长为5 */}
+                        {Array.from({ length: 21 }, (_, i) => i * 5).map((value) => (
+                          <Select.Option key={value} value={value}>
+                            {value}%
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </div>
+                    <span style={{ 
+                      fontWeight: 500, 
+                      color: '#5B8FF9',
+                      width: '80px',
+                      textAlign: 'center'
+                    }}>
+                      {incentives[0]?.reward || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
         </div>
 
         <div style={{ 
