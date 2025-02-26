@@ -109,15 +109,15 @@ const HomePage: React.FC = () => {
               nodeData: {
                 nodeId: generate25DigitID(),
                 name: 'V2.1',
-              },
-              children: [],
-            },
-            {
-              nodeData: {
-                nodeId: generate25DigitID(),
+                  },
+                  children: [],
+                },
+                {
+                  nodeData: {
+                    nodeId: generate25DigitID(),
                 name: 'V2.2',
-              },
-              children: [],
+                  },
+                  children: [],
             },
           ],
         },
@@ -125,11 +125,11 @@ const HomePage: React.FC = () => {
           nodeData: {
             nodeId: generate25DigitID(),
             name: 'V3',
-          },
-          children: [],
-        },
-      ],
-    },
+                  },
+                  children: [],
+                },
+              ],
+            },
   ]);
 
   const random4Digits = () => {
@@ -165,7 +165,7 @@ const HomePage: React.FC = () => {
       basedPercent = baseContributionRef.current.Based - reduction;
       datasetPercent = baseContributionRef.current.DATASET + reduction;
 
-      return {
+    return {
         Based: basedPercent,
         AIGO: baseContributionRef.current.AIGO,
         DATASET: datasetPercent,
@@ -207,30 +207,30 @@ const HomePage: React.FC = () => {
 
     // 确保每个节点都有 Incentives 数据
     const incentives = [
-      {
-        modelId: '',
-        name: `${model?.name}.3`,
-        rate: '15%',
-        reward: `${random4Digits()}`,
-      },
-      {
-        modelId: '',
-        name: `${model?.name}.2`,
-        rate: '15%',
-        reward: `${random4Digits()}`,
-      },
-      {
-        modelId: '',
-        name: `${model?.name}.1`,
-        rate: '20%',
-        reward: `${random4Digits()}`,
-      },
-      {
-        modelId: '',
-        name: model?.name,
-        rate: '50%',
-        reward: `${random4Digits()}`,
-      },
+        {
+          modelId: '',
+          name: `${model?.name}.3`,
+          rate: '15%',
+          reward: `${random4Digits()}`,
+        },
+        {
+          modelId: '',
+          name: `${model?.name}.2`,
+          rate: '15%',
+          reward: `${random4Digits()}`,
+        },
+        {
+          modelId: '',
+          name: `${model?.name}.1`,
+          rate: '20%',
+          reward: `${random4Digits()}`,
+        },
+        {
+          modelId: '',
+          name: model?.name,
+          rate: '50%',
+          reward: `${random4Digits()}`,
+        },
     ];
 
     return {
@@ -253,7 +253,7 @@ const HomePage: React.FC = () => {
     const centerX = 400; // 圆心X坐标
     const centerY = 300; // 圆心Y坐标
     const radius = 200;  // 圆的半径
-  
+
     // 递归处理节点
     function processNode(node, parentId = null, depth = 0, angle = 0, totalNodes = 1) {
       const angleStep = (2 * Math.PI) / totalNodes;
@@ -272,22 +272,23 @@ const HomePage: React.FC = () => {
           width: 140,
           height: 40,
           rawData: node,
+          isNewNode: node.nodeData.isNewNode, // 确保这个属性被传递
           style: {
-            fill: '#f0f2f5', // 背景颜色
-            stroke: '#1890ff', // 边框颜色
-            strokeWidth: 2, // 边框宽度
-            radius: 20, // 圆角，确保不是长方形
+            fill: node.nodeData.isNewNode ? '#f5f0ff' : '#f0f2f5', // 为新节点设置不同的背景色
+            stroke: node.nodeData.isNewNode ? '#722ed1' : '#1890ff', // 为新节点设置不同的边框色
+            strokeWidth: node.nodeData.isNewNode ? 3 : 2, // 为新节点设置更粗的边框
+            radius: 20,
           },
         },
         text: {
           x,
           y,
-          value: node.nodeData.name,
+          value: node.nodeData.name + (node.nodeData.isNewNode ? ' 🔄' : ''), // 为新节点添加图标
         },
       };
-  
+
       nodes.push(flowNode);
-  
+
       if (parentId) {
         edges.push({
           id: `edge_${edgeIdCounter++}`,
@@ -307,17 +308,17 @@ const HomePage: React.FC = () => {
           ],
         });
       }
-  
+
       const childCount = node.children.length;
       node.children.forEach((child, index) => {
         processNode(child, node.nodeData.nodeId, depth + 1, angle + index * angleStep, childCount);
       });
     }
-  
+
     trees.forEach(tree => {
       processNode(tree, null, 0, 0, tree.children.length);
     });
-  
+
     return { nodes, edges };
   };
 
@@ -430,7 +431,7 @@ const HomePage: React.FC = () => {
         });
         
         clickTimer = null;
-        lastClickTime = now;
+      lastClickTime = now;
       }, CLICK_DELAY);
     });
 
@@ -440,7 +441,7 @@ const HomePage: React.FC = () => {
         clearTimeout(clickTimer);
         clickTimer = null;
       }
-      
+
       const nodeId = data?.data?.id;
       const nodeName = "Base Model";
       if (!nodeName) {
@@ -591,7 +592,7 @@ const HomePage: React.FC = () => {
           <span style={{ color: colorMap.ModelName }}>
             {nodeData?.name}
           </span>
-        </Descriptions.Item>
+      </Descriptions.Item>
 
         <Descriptions.Item label={<span style={{ color: colorMap.Based }}>Based</span>}>
           <span style={{ color: colorMap.Based }}>
@@ -881,6 +882,7 @@ const HomePage: React.FC = () => {
       nodeData: {
         nodeId: newNodeId,
         name: newNodeName,
+        isNewNode: true,
       },
       children: [],
     };
@@ -967,7 +969,8 @@ const HomePage: React.FC = () => {
       ...modelsContributions,
       [newNodeName]: {
         ...newModelInfo,
-        isManuallyModified: true  
+        isManuallyModified: true,
+        isNewNode: true
       }
     };
     
@@ -990,6 +993,45 @@ const HomePage: React.FC = () => {
       });
     }
     setManuallyModifiedNodes(prev => [...prev, newNodeName]);
+
+    // 设置一个定时器，在1小时后移除 isNewNode 标记
+    setTimeout(() => {
+      // 找到新创建的节点并更新其属性
+      const node = lf.getNodeModelById(newNodeId);
+      if (node && typeof node.updateTrainingStatus === 'function') {
+        node.updateTrainingStatus(false);
+      }
+      
+      // 更新数据模型
+      const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));
+      const updateNodeInTree = (node) => {
+        if (node.nodeData.nodeId === newNodeId) {
+          node.nodeData.isNewNode = false;
+          return true;
+        }
+        
+        for (let i = 0; i < node.children.length; i++) {
+          if (updateNodeInTree(node.children[i])) {
+            return true;
+          }
+        }
+        
+        return false;
+      };
+      
+      updatedPrimitiveData.forEach(tree => {
+        updateNodeInTree(tree);
+      });
+      
+      setTestPrimitiveData(updatedPrimitiveData);
+      
+      // 更新 modelsContributions
+      const updatedContributions = { ...modelsContributions };
+      if (updatedContributions[newNodeName]) {
+        updatedContributions[newNodeName].isNewNode = false;
+        setModelsContributions(updatedContributions);
+      }
+    }, 3600000); // 1小时 = 3600000毫秒
   };
 
  
@@ -1071,7 +1113,7 @@ const HomePage: React.FC = () => {
         title={
           <div style={{ 
             fontSize: '14px', 
-            fontWeight: 500,
+            fontWeight: 600,
             color: '#1890ff',
             display: 'flex',
             alignItems: 'center',
@@ -1086,7 +1128,7 @@ const HomePage: React.FC = () => {
           left: '50%',
           transform: 'translateX(-50%)',
           width: '100%',
-          maxWidth: '680px',
+          maxWidth: '800px',
           minHeight: '120px',
           zIndex: 1,
           borderRadius: '12px',
@@ -1146,7 +1188,7 @@ const HomePage: React.FC = () => {
                   <Select.Option value="David">David</Select.Option>
                 </Select>
               </Descriptions.Item>
-            </Descriptions>
+      </Descriptions>
           </Col>
           <Col span={8} style={{ 
             display: 'flex', 
@@ -1304,21 +1346,38 @@ const HomePage: React.FC = () => {
           border: 'none',
         }}
       >
-        <Descriptions size={'small'} column={1}>
-          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Total Models</span>}>
-            <span style={{ color: '#0056b3', fontWeight: 500 }}>{totalModelsRef.current}</span>
+        <Descriptions 
+          size={'small'} 
+          column={1}
+          labelStyle={{
+            fontWeight: 600,
+            width: '50%',
+            display: 'inline-block',
+            textAlign: 'left',
+            paddingRight: '8px',
+          }}
+          contentStyle={{
+            color: '#0056b3', 
+            fontWeight: 500,
+            width: '50%',
+            display: 'inline-block',
+            textAlign: 'right',
+          }}
+        >
+          <Descriptions.Item label="Total Models">
+            {totalModelsRef.current}
           </Descriptions.Item>
-          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Data Sets</span>}>
-            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.DataSets}</span>
+          <Descriptions.Item label="Data Sets">
+            {infoData?.DataSets}
           </Descriptions.Item>
-          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Launched Models</span>}>
-            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.LaunchedModels}</span>
+          <Descriptions.Item label="Launched Models">
+            {infoData?.LaunchedModels}
           </Descriptions.Item>
-          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Validator</span>}>
-            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.Validator}</span>
+          <Descriptions.Item label="Validator">
+            {infoData?.Validator}
           </Descriptions.Item>
-          <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Builder</span>}>
-            <span style={{ color: '#0056b3', fontWeight: 500 }}>{infoData?.Builder}</span>
+          <Descriptions.Item label="Builder">
+            {infoData?.Builder}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -1326,12 +1385,12 @@ const HomePage: React.FC = () => {
       {renderModelEvolutionCard()}
 
       {showNodeDetails && (
-        <Card
-          size={'small'}
-          style={{
-            position: 'absolute',
+      <Card
+        size={'small'}
+        style={{
+          position: 'absolute',
             top: '10px',
-            right: '10px',
+          right: '10px',
             width: '300px',
             height: '450px',
             zIndex: 2,

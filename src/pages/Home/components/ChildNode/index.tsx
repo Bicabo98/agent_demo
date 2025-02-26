@@ -2,23 +2,29 @@ import React from 'react';
 import { ReactNodeProps } from '@logicflow/react-node-registry';
 
 const ChildNode: React.FC<ReactNodeProps> = (props) => {
-  // 从 props 中获取节点数据
-  const nodeName = props.model?.properties?.name;
-
+  const isNewNode = props.properties?.isNewNode;
+  
+  // 安全地获取文本值
+  const textValue = props.model?.text?.value || props.properties?.name || '';
+  
   return (
     <div
-      className="child-node"
+      className={`child-node ${isNewNode ? 'training-node' : ''}`}
       style={{
         width: '140px',
         height: '48px',
-        background: '#ffffff',
-        boxShadow: `
-          0 4px 12px rgba(24, 144, 255, 0.1),
-          inset 0 -2px 6px rgba(24, 144, 255, 0.05),
-          inset 0 2px 6px rgba(24, 144, 255, 0.05)
-        `,
-        borderRadius: '16px',
-        border: '2px solid #1890ff',
+        background: isNewNode 
+          ? 'linear-gradient(135deg, #722ed1 0%, #f759ab 100%)' 
+          : 'linear-gradient(135deg, #fa8c16 0%, #f5222d 100%)',
+        boxShadow: isNewNode
+          ? `0 0 15px rgba(114, 46, 209, 0.5),
+             inset 0 -2px 5px rgba(255, 255, 255, 0.2),
+             inset 0 2px 5px rgba(255, 255, 255, 0.1)`
+          : `0 3px 10px rgba(250, 140, 22, 0.2),
+             inset 0 -2px 5px rgba(255, 255, 255, 0.15),
+             inset 0 2px 5px rgba(255, 255, 255, 0.08)`,
+        borderRadius: '24px',
+        border: `1px solid ${isNewNode ? 'rgba(247, 89, 171, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -28,34 +34,36 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
         overflow: 'hidden',
       }}
     >
-      {/* 左侧装饰条 */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: '4px',
-          height: '60%',
-          background: 'linear-gradient(180deg, #1890ff 0%, #36cfc9 100%)',
-          borderRadius: '0 2px 2px 0',
-          boxShadow: '0 0 8px rgba(24, 144, 255, 0.2)',
-        }}
-      />
-
-      {/* 背景装饰 */}
+      {/* 背景光效 */}
       <div
         style={{
           position: 'absolute',
           top: 0,
-          right: 0,
-          width: '40%',
+          left: '-50%',
+          width: '200%',
           height: '100%',
-          background: 'linear-gradient(90deg, transparent, rgba(24, 144, 255, 0.05))',
-          borderRadius: '0 16px 16px 0',
+          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+          transform: 'translateX(-100%)',
+          animation: 'shimmer-child 4s infinite',
         }}
       />
-
+      
+      {/* 训练动画效果 */}
+      {isNewNode && (
+        <div 
+          className="training-animation"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            borderRadius: '24px',
+            overflow: 'hidden',
+          }}
+        />
+      )}
+      
       {/* 文本容器 */}
       <div
         style={{
@@ -63,42 +71,89 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          marginLeft: '8px',
+          zIndex: 2,
         }}
       >
-        
-        {/* 动态显示节点名称 */}
+        {/* 文本 */}
         <span
           style={{
-            color: '#1890ff',
-            fontSize: '14px',
+            color: '#ffffff',
+            fontSize: '15px',
             fontWeight: 500,
-            letterSpacing: '0.3px',
+            textShadow: '0 1px 2px rgba(0, 0, 0, 0.15)',
+            letterSpacing: '0.5px',
           }}
         >
-          {nodeName}
+          {textValue}
+          {isNewNode && <span className="training-indicator"> 🔄</span>}
         </span>
       </div>
 
       <style>
         {`
+          @keyframes shimmer-child {
+            0% {
+              transform: translateX(-100%);
+            }
+            50% {
+              transform: translateX(100%);
+            }
+            100% {
+              transform: translateX(100%);
+            }
+          }
+          
+          .training-node {
+            animation: pulse 2s infinite;
+          }
+          
+          @keyframes pulse {
+            0% {
+              box-shadow: 0 0 0 0 rgba(114, 46, 209, 0.7);
+            }
+            70% {
+              box-shadow: 0 0 0 10px rgba(114, 46, 209, 0);
+            }
+            100% {
+              box-shadow: 0 0 0 0 rgba(114, 46, 209, 0);
+            }
+          }
+          
+          .training-animation {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            background-size: 200% 100%;
+            animation: training-wave 2s linear infinite;
+          }
+          
+          @keyframes training-wave {
+            0% {
+              background-position: 100% 0;
+            }
+            100% {
+              background-position: -100% 0;
+            }
+          }
+          
+          .training-indicator {
+            animation: rotate 1.5s linear infinite;
+            display: inline-block;
+          }
+          
+          @keyframes rotate {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
+          
           .child-node:hover {
             transform: translateY(-2px);
-            border-color: #40a9ff;
-            box-shadow: 0 6px 16px rgba(24, 144, 255, 0.15),
-                       inset 0 -2px 6px rgba(24, 144, 255, 0.08),
-                       inset 0 2px 6px rgba(24, 144, 255, 0.08);
           }
-
-          .child-node:hover::before {
-            opacity: 1;
-          }
-
+          
           .child-node:active {
             transform: translateY(1px);
-            box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1),
-                       inset 0 -1px 4px rgba(24, 144, 255, 0.05),
-                       inset 0 1px 4px rgba(24, 144, 255, 0.05);
           }
         `}
       </style>
