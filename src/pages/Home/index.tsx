@@ -8,13 +8,9 @@ import { registerStartNode } from '@/pages/Home/components/StartNode/startNode';
 import { registerChildNode } from '@/pages/Home/components/ChildNode/childNode';
 import CustomArrow from './components/registerEdge/index';
 import Dagre from './components/tools/dagre';
-import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Pie, Button, Modal, Select } from 'antd';
-import ChatBaseView from '@/pages/Home/components/Chat';
-import ChatModal from '@/pages/Home/components/Chat/ChatModal';
-import { ArrowLeftOutlined, DollarOutlined } from '@ant-design/icons';
-import logicFlow from '@logicflow/core/src/LogicFlow';
-import ProCard from '@ant-design/pro-card';
+import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Button, Modal, Select } from 'antd';
 import { Pie as AntPie } from '@ant-design/charts';
+import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 
 const HomePage: React.FC = () => {
   const refContainer = useRef(null);
@@ -76,7 +72,7 @@ const HomePage: React.FC = () => {
     {
       nodeData: {
         nodeId: generate25DigitID(),
-        name: 'Base Model',
+        name: '',
       },
       children: [
         {
@@ -117,7 +113,7 @@ const HomePage: React.FC = () => {
   }
   const modelData = (model: any) => {
     if (!model?.name) {
-      model.name = "medical-1.0";
+      model.name = "";
     }
 
     const calculateContributions = (modelName: string) => {
@@ -249,6 +245,12 @@ const HomePage: React.FC = () => {
           width: 140,
           height: 40,
           rawData: node,
+          style: {
+            fill: '#f0f2f5', // 背景颜色
+            stroke: '#1890ff', // 边框颜色
+            strokeWidth: 2, // 边框宽度
+            radius: 20, // 圆角，确保不是长方形
+          },
         },
         text: {
           x,
@@ -544,22 +546,40 @@ const HomePage: React.FC = () => {
 
 
   const renderNodeDetails = (nodeData) => {
+    const colorMap = {
+      Based: '#5B8FF9',
+      AIGO: '#5AD8A6',
+      DATASET: '#5D7092',
+      Builder: '#F6BD16',
+      Validator: '#E8684A',
+    };
+
     return (
       <Descriptions size={'small'} column={1}>
-        <Descriptions.Item label='Based'>
-          {nodeData?.contributions?.Based}%
+        <Descriptions.Item label={<span style={{ color: colorMap.Based }}>Based</span>}>
+          <span style={{ color: colorMap.Based }}>
+            {nodeData?.contributions?.Based}%
+          </span>
         </Descriptions.Item>
-        <Descriptions.Item label='AIGO'>
-          {nodeData?.contributions?.AIGO}%
+        <Descriptions.Item label={<span style={{ color: colorMap.AIGO }}>AIGO</span>}>
+          <span style={{ color: colorMap.AIGO }}>
+            {nodeData?.contributions?.AIGO}%
+          </span>
         </Descriptions.Item>
-        <Descriptions.Item label='DATASET'>
-          {nodeData?.contributions?.DATASET}%
+        <Descriptions.Item label={<span style={{ color: colorMap.DATASET }}>DATASET</span>}>
+          <span style={{ color: colorMap.DATASET }}>
+            {nodeData?.contributions?.DATASET}%
+          </span>
         </Descriptions.Item>
-        <Descriptions.Item label='Builder'>
-          {nodeData?.contributions?.Builder}%
+        <Descriptions.Item label={<span style={{ color: colorMap.Builder }}>Builder</span>}>
+          <span style={{ color: colorMap.Builder }}>
+            {nodeData?.contributions?.Builder}%
+          </span>
         </Descriptions.Item>
-        <Descriptions.Item label='Validator'>
-          {nodeData?.contributions?.Validator}%
+        <Descriptions.Item label={<span style={{ color: colorMap.Validator }}>Validator</span>}>
+          <span style={{ color: colorMap.Validator }}>
+            {nodeData?.contributions?.Validator}%
+          </span>
         </Descriptions.Item>
       </Descriptions>
     );
@@ -993,20 +1013,59 @@ const HomePage: React.FC = () => {
     return (
       <Card
         size={'small'}
-        title={'Model Evolution'}
+        title={
+          <div style={{ 
+            fontSize: '14px', 
+            fontWeight: 500,
+            color: '#1890ff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px' 
+          }}>
+            <span>Model Evolution</span>
+          </div>
+        }
         style={{
           position: 'absolute',
-          bottom: '-60px',
+          bottom: '-19px',
           left: '50%',
           transform: 'translateX(-50%)',
-          maxWidth: '800px',
-          minHeight: '150px',
+          width: '100%',
+          maxWidth: '680px',
+          minHeight: '120px',
           zIndex: 1,
+          borderRadius: '12px',
+          boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+          backgroundColor: '#ffffff',
+          border: 'none',
+        }}
+        bodyStyle={{
+          padding: '12px 16px',
+        }}
+        headStyle={{
+          borderBottom: '1px solid #f0f0f0',
+          padding: '8px 16px',
+          minHeight: '32px',
         }}
       >
-        <Row>
+        <Row gutter={[16, 8]}>
           <Col span={16}>
-            <Descriptions size={'small'} column={1}>
+            <Descriptions 
+              size={'small'} 
+              column={1}
+              labelStyle={{
+                color: '#666',
+                fontWeight: 500,
+                padding: '4px 0',
+                fontSize: '13px',
+              }}
+              contentStyle={{
+                color: '#333',
+                fontWeight: 'normal',
+                padding: '4px 0',
+                fontSize: '13px',
+              }}
+            >
               <Descriptions.Item label='Model Name'>
                 {nodeInfoData?.name}
               </Descriptions.Item>
@@ -1021,21 +1080,56 @@ const HomePage: React.FC = () => {
               </Descriptions.Item>
             </Descriptions>
           </Col>
-          <Col span={8} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Button type="primary" style={{ marginBottom: '10px' }} onClick={handleContributionWeightClick}>
+          <Col span={8} style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center',
+            gap: '8px'
+          }}>
+            <Button 
+              type="primary" 
+              size="middle"
+              style={{ 
+                borderRadius: '6px',
+                fontWeight: 500,
+                fontSize: '13px',
+                height: '32px',
+              }} 
+              onClick={handleContributionWeightClick}
+            >
               Contribution Weight
             </Button>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              gap: '8px'
+            }}>
               <Button 
                 type="default" 
-                style={{ width: countdown && countdownNodeId === nodeInfoData.name ? '60%' : '48%' }}
+                size="middle"
+                style={{ 
+                  flex: 1,
+                  height: '32px',
+                  borderRadius: '6px',
+                  fontWeight: 500,
+                  fontSize: '13px',
+                  borderColor: '#1890ff',
+                  color: '#1890ff',
+                }}
                 onClick={() => handleStartButtonClick(nodeInfoData)}
                 disabled={countdown > 0 && countdownNodeId === nodeInfoData.name}
               >
                 Train
               </Button>
               {countdown > 0 && countdownNodeId === nodeInfoData.name && (
-                <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>{countdown}s</span>
+                <span style={{ 
+                  fontWeight: 'bold',
+                  color: '#1890ff',
+                  fontSize: '14px'
+                }}>
+                  {countdown}s
+                </span>
               )}
             </div>
           </Col>
@@ -1091,16 +1185,26 @@ const HomePage: React.FC = () => {
       }}
       ghost
       className='homeContent'
-      style={{ padding: '0', background: 'white' }}
+      style={{ padding: '20px', background: '#f0f2f5' }}
     >
       <div
         className={styles.ModelFlow}
         ref={refContainer}
       ></div>
       <Card
-        title={''}
+        title="Info"
         size={'small'}
-        style={{ position: 'absolute', top: '10px', left: '10px', width: '200px' }}>
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          width: '220px',
+          borderRadius: '12px',
+          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
+          backgroundColor: '#ffffff',
+          padding: '16px',
+        }}
+      >
         <Descriptions size={'small'} column={1}>
           <Descriptions.Item label='TotalModels'>
             {totalModelsRef.current}
@@ -1130,11 +1234,15 @@ const HomePage: React.FC = () => {
             top: '10px',
             right: '10px',
             width: '300px',
-            height: '500px',
+            height: '450px',
             zIndex: 2,
             overflow: 'hidden',
+            borderRadius: '12px',
+            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
+            backgroundColor: '#ffffff',
+            padding: '16px',
           }}
-          title={'Node details'}
+          
         >
           {renderNodeDetails(nodeInfoData)}
           <div style={{ height: '250px', marginTop: '10px' }}> 
@@ -1144,44 +1252,127 @@ const HomePage: React.FC = () => {
       )}
 
       <Modal
-        title="Contribution Weight"
+        title={
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 500,
+            color: '#1890ff',
+          }}>
+            Contribution Weight
+          </div>
+        }
         visible={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        footer={[
-          <Button key="cancel" onClick={handleModalCancel}>
-            Cancle
-          </Button>,
-          <Button key="submit" type="primary" onClick={handleModalOk}>
-            Confirm
-          </Button>,
-        ]}
+        width={480}
+        centered
+        bodyStyle={{
+          padding: '16px',
+        }}
+        style={{
+          borderRadius: '12px',
+          overflow: 'hidden',
+        }}
+        footer={
+          <div style={{ 
+            padding: '12px 24px',
+            borderTop: '1px solid #f0f0f0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '8px'
+          }}>
+            <Button onClick={handleModalCancel}>
+              Cancel
+            </Button>
+            <Button type="primary" onClick={handleModalOk}>
+              Confirm
+            </Button>
+          </div>
+        }
       >
-        <div style={{ marginBottom: 16 }}>The sum must equal 100%</div>
-        <Descriptions size={'small'} column={2}>
-            {Object.keys(percentages).map((key) => (
-                <React.Fragment key={key}>
-                    <Descriptions.Item label={key}>
-                        <Select
-                            value={percentages[key]}
-                            onChange={(value) => handlePercentageChange(value, key)}
-                            style={{ width: 120 }}
-                        >
-                            {Array.from({ length: 11 }, (_, i) => i * 10).map((value) => (
-                                <Select.Option key={value} value={value}>
-                                    {value}%
-                                </Select.Option>
-                            ))}
-                        </Select>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="reward">
-                        <Typography.Text>{random4Digits()}</Typography.Text>
-                    </Descriptions.Item>
-                </React.Fragment>
-            ))}
-        </Descriptions>
-        <div style={{ marginTop: 16 }}>
-            current sum: {Object.values(percentages).reduce((sum, value) => sum + value, 0)}%
+        <div style={{ marginBottom: '16px', color: '#666' }}>
+          Total must be 100%
+        </div>
+        
+        <div style={{ 
+          backgroundColor: '#fafafa',
+          padding: '16px',
+          borderRadius: '8px',
+        }}>
+          {Object.keys(percentages).map((key) => (
+            <div 
+              key={key} 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '12px',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                width: '50%',
+                gap: '12px',
+              }}>
+                <span style={{ 
+                  width: '80px',
+                  color: key === 'Based' ? '#5B8FF9' :
+                         key === 'AIGO' ? '#5AD8A6' :
+                         key === 'DATASET' ? '#5D7092' :
+                         key === 'Builder' ? '#F6BD16' :
+                         '#E8684A',
+                  fontWeight: 500,
+                }}>
+                  {key}
+                </span>
+                <Select
+                  value={percentages[key]}
+                  onChange={(value) => handlePercentageChange(value, key)}
+                  style={{ width: 90 }}
+                >
+                  {Array.from({ length: 11 }, (_, i) => i * 10).map((value) => (
+                    <Select.Option key={value} value={value}>
+                      {value}%
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}>
+                <span style={{ color: '#666' }}>Reward:</span>
+                <span style={{ 
+                  color: '#1890ff',
+                  fontSize: '14px',
+                  minWidth: '60px',
+                }}>
+                  {random4Digits()}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ 
+          marginTop: '16px',
+          padding: '12px 16px',
+          backgroundColor: '#fafafa',
+          borderRadius: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span style={{ color: '#666' }}>Current Total:</span>
+          <span style={{ 
+            color: Object.values(percentages).reduce((sum, value) => sum + value, 0) === 100 ? '#52c41a' : '#ff4d4f',
+            fontWeight: 500,
+            fontSize: '16px',
+          }}>
+            {Object.values(percentages).reduce((sum, value) => sum + value, 0)}%
+          </span>
         </div>
       </Modal>
     </PageContainer>
