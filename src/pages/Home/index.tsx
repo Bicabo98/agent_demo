@@ -6,34 +6,15 @@ import { LogicFlow } from '@logicflow/core';
 import useStateRef from 'react-usestateref';
 import { registerStartNode } from '@/pages/Home/components/StartNode/startNode';
 import { registerChildNode } from '@/pages/Home/components/ChildNode/childNode';
-import CustomArrow from './components/registerEdge/index';
+import CustomArrow from './components/CustomArrow';
 import Dagre from './components/tools/dagre';
 import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Button, Modal, Select } from 'antd';
 import { Pie as AntPie } from '@ant-design/charts';
 import { PlusOutlined, EditOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
 import { PieChart, Pie, Cell, Legend, Tooltip, Label, ResponsiveContainer } from 'recharts';
+import { setNewNodeId, clearNewNodeId } from './components/ChildNode';
+import { registerNewWhiteNode } from './components/NewWhiteNode/newWhiteNode';
 
-
-const getRandomAlgorithm = () => {
-  const algorithms = [
-    'Transformer', 'BERT', 'GPT', 'LSTM', 'CNN', 
-  ];
-  return algorithms[Math.floor(Math.random() * algorithms.length)];
-};
-
-const getRandomDataset = () => {
-  const datasets = [
-    'ImageNet', 'COCO', 'CIFAR-10', 'MNIST', 'WikiText',
-  ];
-  return datasets[Math.floor(Math.random() * datasets.length)];
-};
-
-const getRandomBuilder = () => {
-  const builders = [
-    'DeepMind', 'OpenAI', 'Google Research', 'Facebook AI', 'Microsoft Research',
-  ];
-  return builders[Math.floor(Math.random() * builders.length)];
-};
 
 const HomePage: React.FC = () => {
   const refContainer = useRef(null);
@@ -253,81 +234,61 @@ const HomePage: React.FC = () => {
       contributions: contributionData,
     };
   };
-  const transformTreeToFlowData = (trees: any[]) => {
+  const transformTreeToFlowData = (treeData) => {
     const nodes = [];
     const edges = [];
-    let edgeIdCounter = 0;
-  
-    // 圆形布局参数
-    const centerX = 400; // 圆心X坐标
-    const centerY = 300; // 圆心Y坐标
-    const radius = 200;  // 圆的半径
-
-    // 递归处理节点
-    function processNode(node, parentId = null, depth = 0, angle = 0, totalNodes = 1) {
-      const angleStep = (2 * Math.PI) / totalNodes;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-  
-      const flowNode = {
-        id: node.nodeData.nodeId,
-        type: depth === 0 ? 'start' : 'assignment',
-        x,
-        y,
+    const processNode = (node, parentId = null, level = 0, index = 0) => {
+      const { nodeData, children } = node;
+      const { nodeId, name, isNewNode } = nodeData;
+      
+      // 确定节点类型
+      let type = 'assignment';
+      if (level === 0) {
+        type = 'start';
+      } else if (isNewNode === true) {
+        // 如果是新节点，使用新的节点类型
+        type = 'new-white-node';
+      }
+      
+      // 创建节点
+      const nodeObj = {
+        id: nodeId,
+        type: type,
+        text: { value: name },
         properties: {
-          name: node.nodeData.name,
-          desc: '',
-          frontend_status: '1',
-          width: 140,
-          height: 40,
-          rawData: node,
-          isNewNode: node.nodeData.isNewNode, // 确保这个属性被正确传递
-          style: {
-            fill: node.nodeData.isNewNode ? '#ffffff' : '#f0f2f5', // 为新节点设置不同的背景色
-            stroke: node.nodeData.isNewNode ? '#722ed1' : '#1890ff', // 为新节点设置不同的边框色
-            strokeWidth: node.nodeData.isNewNode ? 3 : 2, // 为新节点设置更粗的边框
-            radius: 20,
-          },
-        },
-        text: {
-          x,
-          y,
-          value: node.nodeData.name + (node.nodeData.isNewNode ? ' Training ...' : ''), // 为新节点添加图标
+          name,
+          isNewNode: !!isNewNode,
+          rawData: node, // 保存原始数据
         },
       };
-
-      nodes.push(flowNode);
-
+      
+      // 添加节点
+      nodes.push(nodeObj);
+      
+      // 如果有父节点，创建边
       if (parentId) {
-        edges.push({
-          id: `edge_${edgeIdCounter++}`,
+        const edgeId = `edge-${parentId}-${nodeId}`;
+        const edge = {
+          id: edgeId,
+          sourceNodeId: parentId,  // 父节点是源节点
+          targetNodeId: nodeId,    // 当前节点是目标节点
           type: 'myBezier',
-          properties: {
-            edgeType: depth === 1 ? 'start' : 'nextStep',
-          },
-          sourceNodeId: parentId,
-          targetNodeId: node.nodeData.nodeId,
-          startPoint: { x: x - 50, y },
-          endPoint: { x, y },
-          pointsList: [
-            { x: x - 50, y },
-            { x: x - 20, y },
-            { x: x - 30, y },
-            { x, y },
-          ],
+        };
+        edges.push(edge);
+      }
+      
+      // 处理子节点
+      if (children && children.length > 0) {
+        children.forEach((child, childIndex) => {
+          processNode(child, nodeId, level + 1, childIndex);
         });
       }
-
-      const childCount = node.children.length;
-      node.children.forEach((child, index) => {
-        processNode(child, node.nodeData.nodeId, depth + 1, angle + index * angleStep, childCount);
-      });
-    }
-
-    trees.forEach(tree => {
-      processNode(tree, null, 0, 0, tree.children.length);
+    };
+    
+    treeData.forEach((tree, index) => {
+      processNode(tree, null, 0, index);
     });
-
+    
     return { nodes, edges };
   };
 
@@ -453,6 +414,7 @@ const HomePage: React.FC = () => {
 
       const nodeId = data?.data?.id;
       const nodeName = data?.data?.properties?.rawData?.nodeData?.name;
+      
       if (!nodeName) {
         message.error('cannot get node info');
         return;
@@ -565,8 +527,10 @@ const HomePage: React.FC = () => {
         logicFlow.fitView(200);
       });
 
+
       registerStartNode(logicFlow);
       registerChildNode(logicFlow);
+      registerNewWhiteNode(logicFlow);
       logicFlow.setDefaultEdgeType('myBezier');
       logicFlow.register(CustomArrow);
       setLf(logicFlow);
@@ -860,12 +824,6 @@ const HomePage: React.FC = () => {
         name: newNodeName,
         isNewNode: true,
         endTime: endTime,
-        style: {
-          background: '#ffffff',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          color: '#333333',  // 文字颜色设为深色
-        }
       },
       children: [],
     };
@@ -883,7 +841,7 @@ const HomePage: React.FC = () => {
         console.log("Added new node to parent:", {
           parent: parentName,
           newNode: newNodeData
-        }); // 添加日志
+        });
         return true;
       }
       
@@ -907,87 +865,126 @@ const HomePage: React.FC = () => {
       return;
     }
     
-    // 添加调试日志
-    console.log("Updated primitive data:", updatedPrimitiveData);
-
     setTestPrimitiveData(updatedPrimitiveData);
 
     if (lf) {
       const { nodes, edges } = transformTreeToFlowData(updatedPrimitiveData);
-
-      nodes.forEach(node => {
-        if (node.id === newNodeId) {
-          // 设置节点样式
-          node.style = {
-            background: '#ffffff',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          };
-          
-          // 设置文本样式
-          node.text.style = {
-            color: '#333333',
-            fontSize: '15px',
-            fontWeight: 500,
-          };
-
-          // 添加带有 training... 前缀的倒计时初始文本
-          node.text.value = `${newNodeName}\ntraining... (06:00:00)`;
-          
-          // 倒计时逻辑保持不变
-          const updateCountdown = () => {
-            const now = Date.now();
-            const timeLeft = endTime - now;
-            
-            if (timeLeft <= 0) {
-              // 时间到，更新节点状态和样式
-              const node = lf.getNodeModelById(newNodeId);
-              if (node) {
-                node.updateText(`${newNodeName}`);
-                node.setProperties({ isNewNode: false });
-                // 恢复为默认样式
-                node.setStyle({
-                  background: 'linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  boxShadow: '0 3px 10px rgba(19, 194, 194, 0.2)',
-                });
-                node.setText({
-                  value: newNodeName,
-                  style: {
-                    color: '#ffffff',
-                    fontSize: '15px',
-                    fontWeight: 500,
-                  }
-                });
-              }
-              return;
-            }
-
-            // 计算剩余时间
-            const hours = Math.floor(timeLeft / (60 * 60 * 1000));
-            const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
-            const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
-
-            // 格式化时间
-            const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            
-            // 更新节点文本，包含 training... 前缀
-            const node = lf.getNodeModelById(newNodeId);
-            if (node) {
-              node.updateText(`${newNodeName}\ntraining... (${timeString})`);
-            }
-
-            // 继续倒计时
-            requestAnimationFrame(updateCountdown);
-          };
-
-          // 开始倒计时
-          updateCountdown();
-        }
-      });
+      
+      // 找到新节点
+      const newNode = nodes.find(node => node.id === newNodeId);
+      if (newNode) {
+        // 只设置节点名称，不包含训练信息
+        newNode.text.value = newNodeName;
+      }
     
       console.log("Transformed flow data:", { nodes, edges });
       lf.render({ nodes, edges });
+      
+      // 创建一个单独的倒计时元素
+      const countdownElement = document.createElement('div');
+      countdownElement.id = `countdown-${newNodeId}`;
+      countdownElement.style.position = 'absolute';
+      countdownElement.style.zIndex = '1000';
+      countdownElement.style.background = 'rgba(255, 255, 255, 0.9)';
+      countdownElement.style.padding = '2px 6px';
+      countdownElement.style.borderRadius = '10px';
+      countdownElement.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+      countdownElement.style.display = 'flex';
+      countdownElement.style.alignItems = 'center';
+      countdownElement.style.fontSize = '12px';
+      countdownElement.style.color = '#666666';
+      countdownElement.style.pointerEvents = 'none'; // 确保不会干扰鼠标事件
+      
+      // 添加旋转图标
+      const iconElement = document.createElement('span');
+      iconElement.innerHTML = '🔄';
+      iconElement.style.marginRight = '4px';
+      iconElement.style.display = 'inline-block';
+      iconElement.style.animation = 'rotate 1.5s linear infinite';
+      
+      // 添加倒计时文本
+      const textElement = document.createElement('span');
+      textElement.innerHTML = 'training... (06:00:00)';
+      
+      countdownElement.appendChild(iconElement);
+      countdownElement.appendChild(textElement);
+      
+      // 添加到文档中
+      document.body.appendChild(countdownElement);
+      
+      // 添加旋转动画样式
+      const styleElement = document.createElement('style');
+      styleElement.innerHTML = `
+        @keyframes rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `;
+      document.head.appendChild(styleElement);
+      
+      // 倒计时逻辑
+      const updateCountdown = () => {
+        const now = Date.now();
+        const timeLeft = endTime - now;
+        
+        if (timeLeft <= 0) {
+          // 时间到，更新节点状态
+          const node = lf.getNodeModelById(newNodeId);
+          if (node) {
+            // 只更新节点名称，不包含训练信息
+            node.updateText(newNodeName);
+            
+            // 获取当前属性
+            const currentProps = node.getProperties();
+            // 更新属性，保留原始数据
+            node.setProperties({
+              ...currentProps,
+              isNewNode: false,
+              rawData: {
+                ...currentProps.rawData,
+                nodeData: {
+                  ...currentProps.rawData.nodeData,
+                  isNewNode: false
+                }
+              }
+            });
+            
+            // 重新渲染图形
+            lf.render(lf.getGraphData());
+          }
+          return;
+        }
+
+        // 计算剩余时间
+        const hours = Math.floor(timeLeft / (60 * 60 * 1000));
+        const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+        const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
+
+        // 格式化时间
+        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // 更新节点文本，包含节点名称和训练信息
+        const node = lf.getNodeModelById(newNodeId);
+        if (node) {
+          node.updateText(`${newNodeName}\ntraining... (${timeString})`);
+        }
+
+        // 继续倒计时
+        requestAnimationFrame(updateCountdown);
+      };
+
+      // 开始倒计时
+      setTimeout(() => {
+        updateCountdown();
+      }, 500);
+      
+      // 监听画布变换事件，确保倒计时元素跟随节点移动
+      lf.on('transform', updateCountdown);
+      
       // @ts-ignore
       lf?.extension.dagre.layout({
         nodesep: 15,
@@ -1001,9 +998,33 @@ const HomePage: React.FC = () => {
       // 找到新创建的节点并更新其属性
       const node = lf.getNodeModelById(newNodeId);
       if (node) {
-        node.setProperties({ isNewNode: false });
-        node.updateText(newNodeName);
+        // 获取当前属性
+        const currentProps = node.getProperties();
+        // 更新属性，保留原始数据
+        node.setProperties({
+          ...currentProps,
+          isNewNode: false,
+          rawData: {
+            ...currentProps.rawData,
+            nodeData: {
+              ...currentProps.rawData.nodeData,
+              isNewNode: false
+            }
+          }
+        });
+        
+        // 重新渲染图形
+        lf.render(lf.getGraphData());
       }
+      
+      // 移除倒计时元素
+      const countdownElement = document.getElementById(`countdown-${newNodeId}`);
+      if (countdownElement) {
+        countdownElement.remove();
+      }
+      
+      // 移除事件监听
+      lf.off('transform', updateCountdown);
       
       // 更新数据模型
       const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));

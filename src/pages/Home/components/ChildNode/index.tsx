@@ -1,10 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { ReactNodeProps } from '@logicflow/react-node-registry';
 
+// 全局变量，用于存储新节点的ID
+const newNodeIds = new Set<string>();
+
+// 导出设置新节点ID的函数
+export const setNewNodeId = (id: string) => {
+  console.log("设置新节点ID:", id);
+  newNodeIds.add(id);
+};
+
+// 导出清除新节点ID的函数
+export const clearNewNodeId = (id: string) => {
+  console.log("清除新节点ID:", id);
+  newNodeIds.delete(id);
+};
+
 const ChildNode: React.FC<ReactNodeProps> = (props) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const textValue = props.model?.text?.value || props.properties?.name || '';
-  const isNewNode = props.properties?.isNewNode;
+  
+  // 获取节点ID
+  const nodeId = props.model?.id || '';
+  
+  // 检查当前节点是否是新节点
+  const isNewNode = newNodeIds.has(nodeId);
+  
+  console.log(`节点 ${nodeId} 渲染, 是否为新节点: ${isNewNode}`);
 
   useEffect(() => {
     if (isNewNode) {
@@ -22,7 +44,7 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
       style={{
         width: '140px',
         height: '48px',
-        background: isNewNode 
+        background: isNewNode
           ? '#ffffff'  // 新节点使用白色背景
           : 'linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%)',  // 已有节点保持青色渐变
         boxShadow: isNewNode
@@ -33,7 +55,7 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
              inset 0 -1px 4px rgba(255, 255, 255, 0.1),
              inset 0 1px 4px rgba(255, 255, 255, 0.1)`,
         borderRadius: '24px',
-        border: isNewNode 
+        border: isNewNode
           ? '1px solid rgba(0, 0, 0, 0.1)'  // 新节点使用浅灰色边框
           : '1px solid rgba(255, 255, 255, 0.2)',
         display: 'flex',
@@ -60,7 +82,7 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
           }}
         />
       )}
-      
+
       <div
         style={{
           position: 'relative',
@@ -75,7 +97,7 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
             color: isNewNode ? '#333333' : '#ffffff',  // 新节点使用深色文字
             fontSize: '15px',
             fontWeight: 500,
-            textShadow: isNewNode 
+            textShadow: isNewNode
               ? 'none'  // 新节点不需要文字阴影
               : '0 1px 2px rgba(0, 0, 0, 0.15)',
             letterSpacing: '0.5px',
@@ -83,7 +105,7 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
         >
           {textValue}
           {isAnimating && (
-            <span 
+            <span
               style={{
                 display: 'inline-block',
                 marginLeft: '4px',
@@ -121,16 +143,16 @@ const ChildNode: React.FC<ReactNodeProps> = (props) => {
           
           .child-node:hover {
             transform: translateY(-2px);
-            box-shadow: ${isNewNode 
-              ? '0 6px 16px rgba(0, 0, 0, 0.12), inset 0 -2px 6px rgba(0, 0, 0, 0.02), inset 0 2px 6px rgba(0, 0, 0, 0.02)'
-              : '0 6px 16px rgba(19, 194, 194, 0.25), inset 0 -2px 6px rgba(255, 255, 255, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.2)'};
+            box-shadow: ${isNewNode
+            ? '0 6px 16px rgba(0, 0, 0, 0.12), inset 0 -2px 6px rgba(0, 0, 0, 0.02), inset 0 2px 6px rgba(0, 0, 0, 0.02)'
+            : '0 6px 16px rgba(19, 194, 194, 0.25), inset 0 -2px 6px rgba(255, 255, 255, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.2)'};
           }
           
           .child-node:active {
             transform: translateY(1px);
             box-shadow: ${isNewNode
-              ? '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 -1px 4px rgba(0, 0, 0, 0.02), inset 0 1px 4px rgba(0, 0, 0, 0.02)'
-              : '0 2px 8px rgba(19, 194, 194, 0.15), inset 0 -1px 4px rgba(255, 255, 255, 0.2), inset 0 1px 4px rgba(255, 255, 255, 0.1)'};
+            ? '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 -1px 4px rgba(0, 0, 0, 0.02), inset 0 1px 4px rgba(0, 0, 0, 0.02)'
+            : '0 2px 8px rgba(19, 194, 194, 0.15), inset 0 -1px 4px rgba(255, 255, 255, 0.2), inset 0 1px 4px rgba(255, 255, 255, 0.1)'};
           }
         `}
       </style>

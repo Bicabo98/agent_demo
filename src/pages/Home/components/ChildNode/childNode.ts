@@ -2,6 +2,7 @@ import { BaseNodeModel, LogicFlow } from '@logicflow/core';
 import { register } from '@logicflow/react-node-registry';
 import { v4 as uuid } from 'uuid';
 import ChildNode from '.';
+import { setNodeState } from './nodeStateStore';
 import '@logicflow/core/lib/style/index.css';
 import '@logicflow/extension/lib/style/index.css';
 
@@ -39,6 +40,9 @@ export function registerChildNode(lf: LogicFlow) {
         },
       ];
       
+      // Log the incoming data to see what's available
+      console.log("Node initNodeData received:", JSON.stringify(data, null, 2));
+      
       // 确保 properties 存在
       if (!this.properties) {
         this.properties = {};
@@ -47,47 +51,57 @@ export function registerChildNode(lf: LogicFlow) {
       // 从数据中获取 isNewNode
       const isNewNode = data.properties?.isNewNode;
       
+      console.log(`节点 ${this.id} 初始化, isNewNode=`, isNewNode);
+      
       // 设置节点属性
       this.setProperties({
         ...this.properties,
-        isNewNode: isNewNode, // 明确设置 isNewNode
+        isNewNode: isNewNode,
         style: isNewNode ? {
-          fill: '#f5f0ff',
-          stroke: '#722ed1',
+          fill: '#ffffff',
+          stroke: '#ffffff',
           strokeWidth: 3,
           radius: 8,
         } : {
-          fill: '#f0f2f5',
-          stroke: '#1890ff',
+          fill: '#ffffff',
+          stroke: '#ffffff',
           strokeWidth: 2,
           radius: 8,
         }
       });
       
-      
+      // 确保使用正确的 ID 更新全局状态存储
+      console.log(`更新状态存储, 节点ID=${this.id}, isNewNode=${isNewNode}`);
+      setNodeState(this.id, { isNewNode: !!isNewNode }); // 使用双感叹号确保是布尔值
     }
-    
     // 添加一个方法来更新节点的训练状态
     updateTrainingStatus(isTraining: boolean) {
-      console.log(" isTraining=",isTraining)
+      console.log(`更新节点 ${this.id} 的训练状态, isTraining=`, isTraining);
+      
       this.setProperties({
         ...this.properties,
         isNewNode: isTraining,
         style: isTraining ? {
-          fill: '#f5f0ff',
-          stroke: '#722ed1',
+          fill: '#ffffff',
+          stroke: '#ffffff',
           strokeWidth: 3,
           radius: 8,
         } : {
-          fill: '#f0f2f5',
-          stroke: '#1890ff',
+          fill: '#ffffff',
+          stroke: '#ffffff',
           strokeWidth: 2,
           radius: 8,
         }
       });
       
+      // 更新全局状态存储
+      console.log(`更新状态存储, 节点ID=${this.id}, isNewNode=${isTraining}`);
+      setNodeState(this.id, { isNewNode: isTraining });
       
       return this;
+    }
+    getIsNewNode() {
+      return this.properties?.isNewNode || false;
     }
   }
   register(
