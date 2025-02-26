@@ -283,7 +283,7 @@ const HomePage: React.FC = () => {
           rawData: node,
           isNewNode: node.nodeData.isNewNode, // 确保这个属性被正确传递
           style: {
-            fill: node.nodeData.isNewNode ? '#f5f0ff' : '#f0f2f5', // 为新节点设置不同的背景色
+            fill: node.nodeData.isNewNode ? '#ffffff' : '#f0f2f5', // 为新节点设置不同的背景色
             stroke: node.nodeData.isNewNode ? '#722ed1' : '#1890ff', // 为新节点设置不同的边框色
             strokeWidth: node.nodeData.isNewNode ? 3 : 2, // 为新节点设置更粗的边框
             radius: 20,
@@ -852,14 +852,23 @@ const HomePage: React.FC = () => {
   const createNewNode = (parentNodeData) => {
     const newNodeId = generate25DigitID();
     const parentName = parentNodeData.name;
-    
     const newNodeName = `${parentName}.${Math.floor(Math.random() * 10) + 1}`;
+
+    // 计算6小时后的时间戳
+    const endTime = Date.now() + (6 * 60 * 60 * 1000);
 
     const newNodeData = {
       nodeData: {
         nodeId: newNodeId,
         name: newNodeName,
         isNewNode: true,
+        endTime: endTime,
+        style: {
+          background: '#ffffff',
+          border: '1px solid rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          color: '#333333',  // 文字颜色设为深色
+        }
       },
       children: [],
     };
@@ -911,7 +920,72 @@ const HomePage: React.FC = () => {
 
       nodes.forEach(node => {
         if (node.id === newNodeId) {
-          node.text.value = newNodeName + " Traning ..."; // 只添加一个训练指示器
+          // 设置节点样式
+          node.style = {
+            background: '#ffffff',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          };
+          
+          // 设置文本样式
+          node.text.style = {
+            color: '#333333',
+            fontSize: '15px',
+            fontWeight: 500,
+          };
+
+          // 添加带有 training... 前缀的倒计时初始文本
+          node.text.value = `${newNodeName}\ntraining... (06:00:00)`;
+          
+          // 倒计时逻辑保持不变
+          const updateCountdown = () => {
+            const now = Date.now();
+            const timeLeft = endTime - now;
+            
+            if (timeLeft <= 0) {
+              // 时间到，更新节点状态和样式
+              const node = lf.getNodeModelById(newNodeId);
+              if (node) {
+                node.updateText(`${newNodeName}`);
+                node.setProperties({ isNewNode: false });
+                // 恢复为默认样式
+                node.setStyle({
+                  background: 'linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 3px 10px rgba(19, 194, 194, 0.2)',
+                });
+                node.setText({
+                  value: newNodeName,
+                  style: {
+                    color: '#ffffff',
+                    fontSize: '15px',
+                    fontWeight: 500,
+                  }
+                });
+              }
+              return;
+            }
+
+            // 计算剩余时间
+            const hours = Math.floor(timeLeft / (60 * 60 * 1000));
+            const minutes = Math.floor((timeLeft % (60 * 60 * 1000)) / (60 * 1000));
+            const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
+
+            // 格式化时间
+            const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // 更新节点文本，包含 training... 前缀
+            const node = lf.getNodeModelById(newNodeId);
+            if (node) {
+              node.updateText(`${newNodeName}\ntraining... (${timeString})`);
+            }
+
+            // 继续倒计时
+            requestAnimationFrame(updateCountdown);
+          };
+
+          // 开始倒计时
+          updateCountdown();
         }
       });
     
@@ -924,18 +998,21 @@ const HomePage: React.FC = () => {
       });
     }
     setManuallyModifiedNodes(prev => [...prev, newNodeName]);
+
+    // 6小时后更新节点状态
     setTimeout(() => {
       // 找到新创建的节点并更新其属性
       const node = lf.getNodeModelById(newNodeId);
-      if (node && typeof node.updateTrainingStatus === 'function') {
-        node.updateTrainingStatus(false);
+      if (node) {
+        node.setProperties({ isNewNode: false });
+        node.updateText(newNodeName);
       }
       
       // 更新数据模型
       const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));
       const updateNodeInTree = (node) => {
         if (node.nodeData.nodeId === newNodeId) {
-          node.nodeData.isNewNode = false
+          node.nodeData.isNewNode = false;
           return true;
         }
         
@@ -960,7 +1037,7 @@ const HomePage: React.FC = () => {
         updatedContributions[newNodeName].isNewNode = false;
         setModelsContributions(updatedContributions);
       }
-    }, 3600000); // 1小时 = 3600000毫秒
+    }, 6 * 60 * 60 * 1000); // 6小时
   };
 
  
