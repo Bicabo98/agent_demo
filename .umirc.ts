@@ -25,13 +25,6 @@ export default defineConfig({
     }
   ],
   npmClient: 'yarn',
-  proxy: {
-    '/api': {
-      target: 'http://52.221.224.189:8631', // 你的后端域名
-      changeOrigin: true,
-      // pathRewrite: { '^/api': '' }, // 根据需求决定是否重写路径
-    },
-  },
   // chainWebpack(config) {
   //   // 清空所有默认图片处理规则
   //   ['png','jpg','jpeg','gif','webp','svg'].forEach(ext => {
