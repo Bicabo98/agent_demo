@@ -16,9 +16,9 @@ import ChatModal from './components/Chat/ChatModal';
 
 const BASEMODEL = "Medical Model"
 const BASEMODEL_V2 = "Home Doctor"
-const BASEMODEL_V3 = "Home Doctor"  
-const BASEMODEL_V2_1 = "Home Doctor V2.1"
-const BASEMODEL_V2_2 = "Home Doctor V2.2"
+const BASEMODEL_V3 = "Family Doctor"  
+const BASEMODEL_V2_1 = "Dentist"
+const BASEMODEL_V2_2 = "Cardiologist"
 
 
 
@@ -31,6 +31,10 @@ const HomePage: React.FC = () => {
   const [nodeInfoData, setNodeInfoData] = useState<any>({});
   const [showModelEvolution, setShowModelEvolution] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isBased, setIsBased] = useState(true);
+
+  const [baseCacheValue, setBaseCacheValue] = useState('');
+
   const [percentages, setPercentages] = useState({
     Based: 0,
     ALGO: 0,
@@ -72,6 +76,10 @@ const HomePage: React.FC = () => {
 
   // 添加一个状态来控制动画
   const [nodeDetailsVisible, setNodeDetailsVisible] = useState(false);
+
+  // 添加一个状态来存储树形图数据
+  const [treeDisplayCache, setTreeDisplayCache] = useState('');
+  const [treeUpdateCounter, setTreeUpdateCounter] = useState(0);
 
   // 将函数定义移到这里，在使用之前
   const generate25DigitID = () => {
@@ -1348,6 +1356,11 @@ const HomePage: React.FC = () => {
         return `${nodeInfoData.name} (${currentValue}%)`;
       }
 
+      // 如果有缓存且不是 Based 类别的更新，则使用缓存
+      if (treeDisplayCache && category === 'Based') {
+        return treeDisplayCache;
+      }
+
       const path = getNodePath(nodeInfoData.name);
       const totalNodes = path.length;
       const treeLines: string[] = [];
@@ -1356,45 +1369,55 @@ const HomePage: React.FC = () => {
       // 生成加起来等于总和的随机分成
       const generateDistribution = (total: number) => {
         const types = ['Algo', 'Dataset', 'Builder', 'Validator'];
-        let remaining = total;
+        // 确保total是非负数
+        const safeTotal = Math.max(0, total);
+        let remaining = safeTotal;
         const distribution = {};
-
+    
         for (let i = 0; i < types.length - 1; i++) {
           if (remaining <= 0) {
             distribution[types[i]] = 0;
             continue;
           }
-          const minValue = Math.min(1, remaining);
-          const maxValue = remaining - (types.length - i - 1) * minValue;
+          // 确保最小值至少为0
+          const minValue = Math.max(0, Math.min(1, remaining));
+          // 确保最大值不小于最小值
+          const maxValue = Math.max(minValue, remaining - (types.length - i - 1) * minValue);
+          // 生成随机值，确保在有效范围内
           const value = Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue;
           distribution[types[i]] = value;
           remaining -= value;
         }
-
-        distribution[types[types.length - 1]] = remaining;
+    
+        // 确保最后一个类型的值不为负
+        distribution[types[types.length - 1]] = Math.max(0, remaining);
         return distribution;
       };
-
+    
       for (let i = totalNodes - 1; i >= 0; i--) {
         const node = path[i];
         let percentage;
-
+    
         if (i === totalNodes - 1) {
-          // 使用basedValue而不是从categoryPercentages获取
-          percentage = basedValue;
+          // 使用basedValue而不是从categoryPercentages获取，确保非负
+          percentage = Math.max(0, basedValue);
         } else {
           const childPercentage = treeLines[0].match(/\((\d+)%\)/);
-          const maxPercentage = childPercentage ? Math.min(8, parseInt(childPercentage[1], 10)) : 8;
-          percentage = Math.floor(Math.random() * (maxPercentage)) + 1;
+          // 确保解析出的值是有效的数字，并且不小于0
+          const parsedValue = childPercentage ? parseInt(childPercentage[1], 10) : 0;
+          const maxPercentage = Math.max(0, Math.min(8, parsedValue));
+          // 确保生成的随机值不为负
+          percentage = maxPercentage > 0 ? 
+            Math.floor(Math.random() * maxPercentage) + 1 : 0;
         }
-
+    
         const distribution = generateDistribution(percentage);
-
+    
         // 使用更短的固定宽度，只在节点名称后添加少量空格
         const paddedNode = node.padEnd(maxLength, '');
         const line = `${paddedNode}(${percentage}%)`;  // 移除了额外的空格
         treeLines.push(line);
-
+    
         if (i > 0) {
           const prefix = '   |   ';
           treeLines.push(`${prefix}${node}-Algo:     ${distribution.Algo}%`);
@@ -1410,8 +1433,15 @@ const HomePage: React.FC = () => {
           treeLines.push(`${prefix}${node}-Validator:${distribution.Validator}%`);
         }
       }
-
-      return treeLines.join('\n');
+    
+      const result = treeLines.join('\n');
+      
+      // 缓存树形图数据
+      if (category === 'Based') {
+        setTreeDisplayCache(result);
+      }
+      
+      return result;
     };
 
     // 处理单个类别的百分比变化
@@ -1438,9 +1468,13 @@ const HomePage: React.FC = () => {
       };
       setCategoryPercentages(newCategoryPercentages);
 
-      // 如果是Based类别，同时更新basedValue
+      console.log("当前策略=", category);
+
+      // 只有当策略是 Based 时才更新树形图
       if (category === 'Based') {
         setBasedValue(value);
+        setTreeDisplayCache(''); // 清除缓存，强制重新计算树形图
+        setTreeUpdateCounter(prev => prev + 1); // 增加更新计数器，触发重新渲染
       }
     };
 

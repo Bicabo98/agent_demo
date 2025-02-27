@@ -1,5 +1,23 @@
 import { request } from '@umijs/max';
 
+
+
+
+export async function apiChat(
+  body: AGENTAPI.ChatReq,
+  options?: { [key: string]: any },
+) {
+  return request<AGENTAPI.ChatReq>('/api/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  });
+}
+
+
 export async function proposals(
   body: AGENTAPI.ProposalsReq,
   options?: { [key: string]: any },

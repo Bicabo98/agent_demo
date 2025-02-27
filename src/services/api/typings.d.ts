@@ -130,5 +130,9 @@ declare namespace AGENTAPI {
     proposals:ProposalInfo[],
   }
 
+  interface ChatReq {
+    model_version: string,
+    text: string,
+  }
 
 }

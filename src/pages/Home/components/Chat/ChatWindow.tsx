@@ -6,6 +6,7 @@ import { Input, Button, List, Avatar } from "antd"
 import { SendOutlined } from "@ant-design/icons"
 import styled from "styled-components"
 
+
 // 模拟数据
 const initialMessages = [
   { id: 1, sender: "other", content: "你好!", avatar: "/placeholder.svg?height=40&width=40" },
@@ -70,7 +71,10 @@ const ChatWindow: React.FC = () => {
   const [inputValue, setInputValue] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesListRef = useRef<HTMLDivElement>(null)
-  const handleSend = () => {
+  const handleSend = async () => {
+
+    console.log(inputValue)
+
     if (inputValue.trim()) {
       const newMessage = {
         id: messages.length + 1,
@@ -81,8 +85,40 @@ const ChatWindow: React.FC = () => {
       setMessages([...messages, newMessage])
       setInputValue("")
       // messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+
+      const response = await callChatAPI(inputValue.trim())
+      console.log(response)
     }
   }
+
+
+  const callChatAPI = async (message: string) => {
+    try {
+      const response = await fetch("http://144.126.138.135:1234/api/chat", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model_version: "v1",
+          text: message
+        })
+      });
+
+      console.log("response=", response)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("API response:", data);
+      return data;
+    } catch (error) {
+      console.error("Error calling chat API:", error);
+      return null;
+    }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
