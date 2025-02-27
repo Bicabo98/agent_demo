@@ -16,7 +16,7 @@ import ChatModal from './components/Chat/ChatModal';
 
 const BASEMODEL = "Medical Model"
 const BASEMODEL_V2 = "Home Doctor"
-const BASEMODEL_V3 = "Family Doctor"
+const BASEMODEL_V3 = "Family Doctor"  
 const BASEMODEL_V2_1 = "Dentist"
 const BASEMODEL_V2_2 = "Cardiologist"
 
@@ -31,8 +31,17 @@ const HomePage: React.FC = () => {
   const [nodeInfoData, setNodeInfoData] = useState<any>({});
   const [showModelEvolution, setShowModelEvolution] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isBased, setIsBased] = useState(true);
 
+  const [baseCacheValue, setBaseCacheValue] = useState('');
 
+  const [percentages, setPercentages] = useState({
+    Based: 0,
+    ALGO: 0,
+    DATASET: 0,
+    Builder: 0,
+    Validator: 0,
+  });
   const infoDefaultData: any = {
     TotalModels: 5,
     DataSets: 3,
@@ -729,7 +738,6 @@ const HomePage: React.FC = () => {
 
   const handleModalOk = () => {
     if (!nodeInfoData?.name) return;
-
     const updatedContributions = {
       ...modelsContributions,
       [nodeInfoData.name]: {
@@ -785,13 +793,24 @@ const HomePage: React.FC = () => {
     }
 
     setIsModalVisible(false);
-
-
-
   };
 
   const handleModalCancel = () => {
     setIsModalVisible(false);
+  };
+
+  const handlePercentageChange = (value: number, key: string) => {
+    setPercentages((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+
+    // 更新对应节点的 reward 值
+    const updatedContributions = { ...modelsContributions };
+    if (updatedContributions[key]) {
+      updatedContributions[key].Incentives[0].reward = `${random4Digits()}`;
+    }
+    setModelsContributions(updatedContributions);
   };
 
 
@@ -1284,6 +1303,7 @@ const HomePage: React.FC = () => {
   const ContributionWeightContent = () => {
     const categories = ['Based', 'Algo', 'Dataset', 'Builder', 'Validator'];
 
+    // 添加一个state来存储Based的值，用于控制树形图更新
     const [basedValue, setBasedValue] = useState(categoryPercentages['Based'][nodeInfoData?.name || ''] || 0);
 
     // 获取节点的父节点路径
@@ -1341,7 +1361,6 @@ const HomePage: React.FC = () => {
         return treeDisplayCache;
       }
 
-
       const path = getNodePath(nodeInfoData.name);
       const totalNodes = path.length;
       const treeLines: string[] = [];
@@ -1354,7 +1373,7 @@ const HomePage: React.FC = () => {
         const safeTotal = Math.max(0, total);
         let remaining = safeTotal;
         const distribution = {};
-
+    
         for (let i = 0; i < types.length - 1; i++) {
           if (remaining <= 0) {
             distribution[types[i]] = 0;
@@ -1369,16 +1388,16 @@ const HomePage: React.FC = () => {
           distribution[types[i]] = value;
           remaining -= value;
         }
-
+    
         // 确保最后一个类型的值不为负
         distribution[types[types.length - 1]] = Math.max(0, remaining);
         return distribution;
       };
-
+    
       for (let i = totalNodes - 1; i >= 0; i--) {
         const node = path[i];
         let percentage;
-
+    
         if (i === totalNodes - 1) {
           // 使用basedValue而不是从categoryPercentages获取，确保非负
           percentage = Math.max(0, basedValue);
@@ -1388,17 +1407,17 @@ const HomePage: React.FC = () => {
           const parsedValue = childPercentage ? parseInt(childPercentage[1], 10) : 0;
           const maxPercentage = Math.max(0, Math.min(8, parsedValue));
           // 确保生成的随机值不为负
-          percentage = maxPercentage > 0 ?
+          percentage = maxPercentage > 0 ? 
             Math.floor(Math.random() * maxPercentage) + 1 : 0;
         }
-
+    
         const distribution = generateDistribution(percentage);
-
+    
         // 使用更短的固定宽度，只在节点名称后添加少量空格
         const paddedNode = node.padEnd(maxLength, '');
         const line = `${paddedNode}(${percentage}%)`;  // 移除了额外的空格
         treeLines.push(line);
-
+    
         if (i > 0) {
           const prefix = '   |   ';
           treeLines.push(`${prefix}${node}-Algo:     ${distribution.Algo}%`);
@@ -1414,14 +1433,14 @@ const HomePage: React.FC = () => {
           treeLines.push(`${prefix}${node}-Validator:${distribution.Validator}%`);
         }
       }
-
+    
       const result = treeLines.join('\n');
-
+      
       // 缓存树形图数据
       if (category === 'Based') {
         setTreeDisplayCache(result);
       }
-
+      
       return result;
     };
 
@@ -1448,6 +1467,8 @@ const HomePage: React.FC = () => {
         }
       };
       setCategoryPercentages(newCategoryPercentages);
+
+      console.log("当前策略=", category);
 
       // 只有当策略是 Based 时才更新树形图
       if (category === 'Based') {
@@ -1545,29 +1566,27 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* Based树形图区域 */}
-        {nodeInfoData?.name !== BASEMODEL && (
+        <div style={{
+          padding: '20px',
+          backgroundColor: '#f0f7ff',
+          borderRadius: '12px',
+          border: '1px solid #e6f0f9',
+          marginBottom: '16px'
+        }}>
           <div style={{
-            padding: '20px',
-            backgroundColor: '#f0f7ff',
-            borderRadius: '12px',
-            border: '1px solid #e6f0f9',
-            marginBottom: '16px'
+            fontFamily: 'Consolas, monospace',
+            whiteSpace: 'pre',
+            color: '#374151',
+            fontSize: '13px',
+            lineHeight: '1.6',
+            backgroundColor: '#fff',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
           }}>
-            <div style={{
-              fontFamily: 'Consolas, monospace',
-              whiteSpace: 'pre',
-              color: '#374151',
-              fontSize: '13px',
-              lineHeight: '1.6',
-              backgroundColor: '#fff',
-              padding: '16px',
-              borderRadius: '8px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-            }}>
-              {getTreeDisplay('Based')}
-            </div>
+            {getTreeDisplay('Based')}
           </div>
-        )}
+        </div>
 
         {/* 总计区域 */}
         <div style={{
@@ -1647,8 +1666,6 @@ const HomePage: React.FC = () => {
     }
   }, [showNodeDetails]);
 
-
-
   return (
     <PageContainer
       pageHeaderRender={false}
@@ -1710,239 +1727,52 @@ const HomePage: React.FC = () => {
         ref={refContainer}
       ></div>
       <Card
-        title={
-          <div style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            color: '#1a365d',
-            textShadow: '0 1px 2px rgba(0,0,0,0.05)',
-            padding: '4px 0',
-            borderBottom: '2px solid rgba(24, 144, 255, 0.3)',
-            marginBottom: '8px',
-            display: 'flex',
-            justifyContent: 'center'
-          }}>
-            Info
-          </div>
-        }
+        title="Info"
         size={'small'}
         style={{
           position: 'absolute',
-          bottom: '10px',
+          top: '10px',
           left: '10px',
-          width: '800px',
-          borderRadius: '16px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1), 0 2px 10px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.2) inset',
-          background: 'linear-gradient(135deg, #f8faff, #e6f7ff)',
+          width: '220px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+          background: 'linear-gradient(135deg, #f0f2f5, #e6f7ff)', // 渐变背景
           padding: '16px',
           border: 'none',
-          backdropFilter: 'blur(10px)',
-          transform: 'translateZ(0)',
-          transition: 'all 0.3s ease',
-          overflow: 'hidden',
-        }}
-        headStyle={{
-          borderBottom: 'none',
-          padding: '12px 16px 0',
-          backgroundColor: 'transparent'
-        }}
-        bodyStyle={{
-          padding: '8px 16px 16px'
         }}
       >
         <Descriptions
           size={'small'}
-          column={5}
-          colon={false}
+          column={1}
+          labelStyle={{
+            fontWeight: 600,
+            width: '50%',
+            display: 'inline-block',
+            textAlign: 'left',
+            paddingRight: '8px',
+          }}
+          contentStyle={{
+            color: '#0056b3',
+            fontWeight: 500,
+            width: '50%',
+            display: 'inline-block',
+            textAlign: 'right',
+          }}
         >
-          <Descriptions.Item>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              width: '140px', // 设置固定宽度
-              margin: '0 auto' // 居中对齐
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                whiteSpace: 'nowrap',
-                color: '#2d3748',
-                fontWeight: 600,
-              }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#1890ff',
-                  marginRight: '8px',
-                  boxShadow: '0 0 4px #1890ff'
-                }}></span>
-                Total Models
-              </div>
-              <div style={{
-                color: '#1890ff',
-                fontWeight: 600,
-                fontSize: '16px',
-                textShadow: '0 0 1px rgba(24, 144, 255, 0.2)'
-              }}>
-                {totalModelsRef.current}
-              </div>
-            </div>
+          <Descriptions.Item label="Total Models">
+            {totalModelsRef.current}
           </Descriptions.Item>
-
-          <Descriptions.Item>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              width: '140px', // 设置固定宽度
-              margin: '0 auto' // 居中对齐
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                whiteSpace: 'nowrap',
-                color: '#2d3748',
-                fontWeight: 600,
-              }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#52c41a',
-                  marginRight: '8px',
-                  boxShadow: '0 0 4px #52c41a'
-                }}></span>
-                Data Sets
-              </div>
-              <div style={{
-                color: '#52c41a',
-                fontWeight: 600,
-                fontSize: '16px',
-                textShadow: '0 0 1px rgba(82, 196, 26, 0.2)'
-              }}>
-                {infoData?.DataSets}
-              </div>
-            </div>
+          <Descriptions.Item label="Data Sets">
+            {infoData?.DataSets}
           </Descriptions.Item>
-
-          <Descriptions.Item>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              width: '140px', // 设置固定宽度
-              margin: '0 auto' // 居中对齐
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                whiteSpace: 'nowrap',
-                color: '#2d3748',
-                fontWeight: 600,
-              }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#722ed1',
-                  marginRight: '8px',
-                  boxShadow: '0 0 4px #722ed1'
-                }}></span>
-                Launched
-              </div>
-              <div style={{
-                color: '#722ed1',
-                fontWeight: 600,
-                fontSize: '16px',
-                textShadow: '0 0 1px rgba(114, 46, 209, 0.2)'
-              }}>
-                {infoData?.LaunchedModels}
-              </div>
-            </div>
+          <Descriptions.Item label="Launched Models">
+            {infoData?.LaunchedModels}
           </Descriptions.Item>
-
-          <Descriptions.Item>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              width: '140px', // 设置固定宽度
-              margin: '0 auto' // 居中对齐
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                whiteSpace: 'nowrap',
-                color: '#2d3748',
-                fontWeight: 600,
-              }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#fa8c16',
-                  marginRight: '8px',
-                  boxShadow: '0 0 4px #fa8c16'
-                }}></span>
-                Validator
-              </div>
-              <div style={{
-                color: '#fa8c16',
-                fontWeight: 600,
-                fontSize: '16px',
-                textShadow: '0 0 1px rgba(250, 140, 22, 0.2)'
-              }}>
-                {infoData?.Validator}
-              </div>
-            </div>
+          <Descriptions.Item label="Validator">
+            {infoData?.Validator}
           </Descriptions.Item>
-
-          <Descriptions.Item>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              width: '140px', // 设置固定宽度
-              margin: '0 auto' // 居中对齐
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                whiteSpace: 'nowrap',
-                color: '#2d3748',
-                fontWeight: 600,
-              }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#f5222d',
-                  marginRight: '8px',
-                  boxShadow: '0 0 4px #f5222d'
-                }}></span>
-                Builder
-              </div>
-              <div style={{
-                color: '#f5222d',
-                fontWeight: 600,
-                fontSize: '16px',
-                textShadow: '0 0 1px rgba(245, 34, 45, 0.2)'
-              }}>
-                {infoData?.Builder}
-              </div>
-            </div>
+          <Descriptions.Item label="Builder">
+            {infoData?.Builder}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -1950,7 +1780,7 @@ const HomePage: React.FC = () => {
       {renderModelEvolutionCard()}
 
       {showNodeDetails && (
-        <div
+        <div 
           className="node-details-container"
           style={{
             position: 'absolute',
@@ -2006,39 +1836,10 @@ const HomePage: React.FC = () => {
 
             {/* 添加下拉框和按钮区域 */}
             <div style={{
-              marginTop: '1px',
-              //borderTop: '1px solid #f0f0f0',
-              paddingTop: '16px',
-              textAlign: 'center' // 使内容居中
+              marginTop: '20px',
+              borderTop: '1px solid #f0f0f0',
+              paddingTop: '16px'
             }}>
-              {/* 添加横线和标题 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '12px'
-              }}>
-                <hr style={{
-                  flex: 1,
-                  border: 'none',
-                  borderTop: '1px solid #f0f0f0',
-                  margin: '0 10px' // 横线与文本之间的间距
-                }} />
-                <span style={{
-                  fontWeight: 600,
-                  fontSize: '16px',
-                  color: '#333',
-                  whiteSpace: 'nowrap' // 防止文本换行
-                }}>
-                  Evolution
-                </span>
-                <hr style={{
-                  flex: 1,
-                  border: 'none',
-                  borderTop: '1px solid #f0f0f0',
-                  margin: '0 10px' // 横线与文本之间的间距
-                }} />
-              </div>
               {/* Model Algorithm 下拉框 */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{
@@ -2055,11 +1856,11 @@ const HomePage: React.FC = () => {
                   defaultValue={nodeInfoData?.algorithm || undefined}
                   size="small"
                 >
-                  <Select.Option value="Linear Regression">Linear Regression</Select.Option>
-                  <Select.Option value="Random Forest">Random Forest</Select.Option>
-                  <Select.Option value="Neural Networks">Neural Networks</Select.Option>
-                  <Select.Option value="FP-Growth">FP-Growth</Select.Option>
-                  <Select.Option value="Decision Tree">Decision Tree</Select.Option>
+                  <Select.Option value="transformer">Transformer</Select.Option>
+                  <Select.Option value="cnn">CNN</Select.Option>
+                  <Select.Option value="rnn">RNN</Select.Option>
+                  <Select.Option value="lstm">LSTM</Select.Option>
+                  <Select.Option value="gpt">GPT</Select.Option>
                 </Select>
               </div>
 
@@ -2079,10 +1880,10 @@ const HomePage: React.FC = () => {
                   defaultValue={nodeInfoData?.dataset?.id || undefined}
                   size="small"
                 >
-                  <Select.Option value="dataset1">HandNet</Select.Option>
-                  <Select.Option value="dataset2">MPI-INF-3DHP</Select.Option>
-                  <Select.Option value="dataset3">VGG-Face2</Select.Option>
-                  <Select.Option value="dataset4">InternVid</Select.Option>
+                  <Select.Option value="dataset1">Common Crawl</Select.Option>
+                  <Select.Option value="dataset2">Wikipedia</Select.Option>
+                  <Select.Option value="dataset3">Books</Select.Option>
+                  <Select.Option value="dataset4">Code</Select.Option>
                 </Select>
               </div>
 
@@ -2228,11 +2029,10 @@ const HomePage: React.FC = () => {
         onClose={() => {
           console.log('111');
           setShowChatModel({ showModel: false, data: {} });
-        }} />
+        }} />        
 
     </PageContainer>
   );
 };
 
 export default HomePage;
-

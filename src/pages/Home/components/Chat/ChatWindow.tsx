@@ -9,9 +9,9 @@ import styled from "styled-components"
 
 // 模拟数据
 const initialMessages = [
-  { id: 1, sender: "other", content: "你好!", avatar: "/placeholder.svg?height=40&width=40" },
-  { id: 2, sender: "me", content: "你好!很高兴认识你。", avatar: "/placeholder.svg?height=40&width=40" },
-  { id: 3, sender: "other", content: "今天天气真不错,适合出去走走。", avatar: "/placeholder.svg?height=40&width=40" },
+  { id: 1, sender: "other", content: "Hello!", avatar: "/placeholder.svg?height=40&width=40" },
+  { id: 2, sender: "me", content: "Hello! Nice to meet you.", avatar: "/placeholder.svg?height=40&width=40" },
+  { id: 3, sender: "other", content: "Today is a good day, it's sunny.", avatar: "/placeholder.svg?height=40&width=40" },
 ]
 
 const ChatContainer = styled.div`
@@ -162,10 +162,10 @@ const ChatWindow: React.FC = () => {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="输入消息..."
+          placeholder="Input message..."
         />
         <Button type="primary" icon={<SendOutlined />} onClick={handleSend}>
-          发送
+          Send
         </Button>
       </InputContainer>
     </ChatContainer>
