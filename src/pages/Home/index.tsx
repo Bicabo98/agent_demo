@@ -8,7 +8,7 @@ import { registerStartNode } from '@/pages/Home/components/StartNode/startNode';
 import { registerChildNode } from '@/pages/Home/components/ChildNode/childNode';
 import CustomArrow from './components/CustomArrow';
 import Dagre from './components/tools/dagre';
-import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Button, Modal, Select } from 'antd';
+import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Button, Modal, Select ,Input} from 'antd';
 import { PlusOutlined, EditOutlined, CloseOutlined, EyeOutlined, PercentageOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { PieChart, Pie, Cell, Legend, Tooltip, Label, ResponsiveContainer } from 'recharts';
 import { registerNewWhiteNode } from './components/NewWhiteNode/newWhiteNode';
@@ -78,6 +78,8 @@ const HomePage: React.FC = () => {
   // 添加一个状态来存储树形图数据
   const [treeDisplayCache, setTreeDisplayCache] = useState('');
   const [treeUpdateCounter, setTreeUpdateCounter] = useState(0);
+  // 添加状态变量存储自定义节点名称
+  const [customNodeName, setCustomNodeName] = useState('');
 
   // 将函数定义移到这里，在使用之前
   const generate25DigitID = () => {
@@ -808,12 +810,18 @@ const HomePage: React.FC = () => {
   const createNewNode = (parentNodeData, contributionData) => {
     const newNodeId = generate25DigitID();
     const parentName = parentNodeData.name;
-    
-    // 从医生名称数组中随机选择一个
-    const randomDoctorName = doctorNames[Math.floor(Math.random() * doctorNames.length)];
-    
-    // 使用医生名称作为新节点名称
-    const newNodeName = `${randomDoctorName}`;
+
+    // 使用自定义名称或随机医生名称
+    let newNodeName;
+    if (customNodeName && customNodeName.trim() !== '') {
+      newNodeName = customNodeName.trim();
+      // 清空自定义名称，以便下次使用
+      setCustomNodeName('');
+    } else {
+      // 从医生名称数组中随机选择一个
+      const randomDoctorName = doctorNames[Math.floor(Math.random() * doctorNames.length)];
+      newNodeName = randomDoctorName;
+    }
 
     // 计算6小时后的时间戳
     const endTime = Date.now() + (6 * 60 * 60 * 1000);
@@ -881,7 +889,7 @@ const HomePage: React.FC = () => {
     };
     setModelsContributions(updatedContributions);
     // 更新总模型数量
-  totalModelsRef.current += 1;
+    totalModelsRef.current += 1;
 
     if (lf) {
       const { nodes, edges } = transformTreeToFlowData(updatedPrimitiveData);
@@ -1907,7 +1915,7 @@ const HomePage: React.FC = () => {
             top: '10px',
             right: '10px',
             width: '350px',
-            height: '850px',
+            height: '900px',
             zIndex: 2,
             transition: 'transform 0.3s ease-in-out',
             transform: nodeDetailsVisible ? 'translateX(0)' : 'translateX(100%)',
@@ -1989,6 +1997,26 @@ const HomePage: React.FC = () => {
                   margin: '0 10px' // 横线与文本之间的间距
                 }} />
               </div>
+
+              {/* 新节点名称输入框 */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{
+                  marginBottom: '4px',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#333'
+                }}>
+                  New Model Name:
+                </div>
+                <Input
+                  placeholder="Enter custom name (optional)"
+                  style={{ width: '100%' }}
+                  size="small"
+                  onChange={(e) => setCustomNodeName(e.target.value)}
+                  value={customNodeName}
+                />
+              </div>
+
               {/* Model Algorithm 下拉框 */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{
