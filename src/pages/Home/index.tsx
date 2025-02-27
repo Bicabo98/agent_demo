@@ -1741,51 +1741,166 @@ const HomePage: React.FC = () => {
         ref={refContainer}
       ></div>
       <Card
-        title="Info"
+        title={
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            color: '#1a365d',
+            textShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            padding: '4px 0',
+            borderBottom: '2px solid rgba(24, 144, 255, 0.3)',
+            marginBottom: '8px'
+          }}>
+            Info
+          </div>
+        }
         size={'small'}
         style={{
           position: 'absolute',
           top: '10px',
           left: '10px',
           width: '220px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-          background: 'linear-gradient(135deg, #f0f2f5, #e6f7ff)', // 渐变背景
+          borderRadius: '16px',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1), 0 2px 10px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.2) inset',
+          background: 'linear-gradient(135deg, #f8faff, #e6f7ff)',
           padding: '16px',
           border: 'none',
+          backdropFilter: 'blur(10px)',
+          transform: 'translateZ(0)',
+          transition: 'all 0.3s ease',
+          overflow: 'hidden',
+        }}
+        headStyle={{
+          borderBottom: 'none',
+          padding: '12px 16px 0',
+          backgroundColor: 'transparent'
+        }}
+        bodyStyle={{
+          padding: '8px 16px 16px'
         }}
       >
+        {/* 添加一个装饰性的圆形元素 */}
+        <div style={{
+          position: 'absolute',
+          top: '-20px',
+          right: '-20px',
+          width: '100px',
+          height: '100px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(24, 144, 255, 0.2) 0%, rgba(24, 144, 255, 0) 70%)',
+          zIndex: 0
+        }}></div>
+        
         <Descriptions
           size={'small'}
           column={1}
+          colon={false}
           labelStyle={{
             fontWeight: 600,
             width: '50%',
             display: 'inline-block',
             textAlign: 'left',
             paddingRight: '8px',
+            color: '#2d3748',
+            position: 'relative',
+            zIndex: 1,
+            marginBottom: '4px'
           }}
           contentStyle={{
-            color: '#0056b3',
-            fontWeight: 500,
+            color: '#1890ff',
+            fontWeight: 600,
             width: '50%',
             display: 'inline-block',
             textAlign: 'right',
+            position: 'relative',
+            zIndex: 1,
+            textShadow: '0 0 1px rgba(24, 144, 255, 0.2)',
+            marginBottom: '4px'
           }}
         >
-          <Descriptions.Item label="Total Models">
+          <Descriptions.Item 
+            label={<span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                backgroundColor: '#1890ff',
+                marginRight: '8px',
+                boxShadow: '0 0 4px #1890ff'
+              }}></span>
+              Total Models
+            </span>}
+            style={{ marginBottom: '2px' }}
+          >
             {totalModelsRef.current}
           </Descriptions.Item>
-          <Descriptions.Item label="Data Sets">
+          <Descriptions.Item 
+            label={<span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                backgroundColor: '#52c41a',
+                marginRight: '8px',
+                boxShadow: '0 0 4px #52c41a'
+              }}></span>
+              Data Sets
+            </span>}
+            style={{ marginBottom: '2px' }}
+          >
             {infoData?.DataSets}
           </Descriptions.Item>
-          <Descriptions.Item label="Launched Models">
+          <Descriptions.Item 
+            label={<span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                backgroundColor: '#722ed1',
+                marginRight: '8px',
+                boxShadow: '0 0 4px #722ed1'
+              }}></span>
+              Launched Models
+            </span>}
+            style={{ marginBottom: '2px' }}
+          >
             {infoData?.LaunchedModels}
           </Descriptions.Item>
-          <Descriptions.Item label="Validator">
+          <Descriptions.Item 
+            label={<span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                backgroundColor: '#fa8c16',
+                marginRight: '8px',
+                boxShadow: '0 0 4px #fa8c16'
+              }}></span>
+              Validator
+            </span>}
+            style={{ marginBottom: '2px' }}
+          >
             {infoData?.Validator}
           </Descriptions.Item>
-          <Descriptions.Item label="Builder">
+          <Descriptions.Item 
+            label={<span style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                backgroundColor: '#f5222d',
+                marginRight: '8px',
+                boxShadow: '0 0 4px #f5222d'
+              }}></span>
+              Builder
+            </span>}
+            style={{ marginBottom: '0' }}
+          >
             {infoData?.Builder}
           </Descriptions.Item>
         </Descriptions>
