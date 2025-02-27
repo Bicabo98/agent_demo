@@ -9,11 +9,18 @@ import { registerChildNode } from '@/pages/Home/components/ChildNode/childNode';
 import CustomArrow from './components/CustomArrow';
 import Dagre from './components/tools/dagre';
 import { Card, Col, Descriptions, Flex, message, Popover, Row, Statistic, Typography, Button, Modal, Select } from 'antd';
-import { Pie as AntPie } from '@ant-design/charts';
-import { PlusOutlined, EditOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, CloseOutlined, EyeOutlined, PercentageOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { PieChart, Pie, Cell, Legend, Tooltip, Label, ResponsiveContainer } from 'recharts';
-import { setNewNodeId, clearNewNodeId } from './components/ChildNode';
 import { registerNewWhiteNode } from './components/NewWhiteNode/newWhiteNode';
+import ChatModal from './components/Chat/ChatModal';
+
+const BASEMODEL = "Medical Model"
+const BASEMODEL_V2 = "Home Doctor"
+const BASEMODEL_V3 = "Home Doctor"  
+const BASEMODEL_V2_1 = "Home Doctor V2.1"
+const BASEMODEL_V2_2 = "Home Doctor V2.2"
+
+
 
 
 const HomePage: React.FC = () => {
@@ -26,34 +33,29 @@ const HomePage: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [percentages, setPercentages] = useState({
     Based: 0,
-    AIGO: 0,
+    ALGO: 0,
     DATASET: 0,
     Builder: 0,
     Validator: 0,
   });
-  const [currentModelContributions, setCurrentModelContributions] = useState(null);
   const infoDefaultData: any = {
     TotalModels: 5,
     DataSets: 3,
     LaunchedModels: 3,
-    Validator:10,
+    Validator: 10,
     Builder: 4,
   };
-  const [modelsContributions, setModelsContributions] = useState<{[key: string]: any}>({});
+  const [modelsContributions, setModelsContributions] = useState<{ [key: string]: any }>({});
   const [baseContribution, setBaseContribution] = useState({
     Based: 40,
-    AIGO: 20,
+    ALGO: 20,
     DATASET: 20,
     Builder: 10,
     Validator: 10,
   });
-  const [baseContribution1, setBaseContribution1] = useState<any>({});
   const baseContributionRef = useRef(baseContribution);
-  const [countdown, setCountdown] = useState(0);
-  const [countdownNodeId, setCountdownNodeId] = useState('');
   const [manuallyModifiedNodes, setManuallyModifiedNodes] = useState<string[]>([]);
-
-  const modelsContributionsRef = useRef<{[key: string]: any}>({});
+  const modelsContributionsRef = useRef<{ [key: string]: any }>({});
   const totalModelsRef = useRef(5);
   const [showNodeDetails, setShowNodeDetails] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -62,11 +64,14 @@ const HomePage: React.FC = () => {
   // 为每个类别存储单独的百分比
   const [categoryPercentages, setCategoryPercentages] = useState({
     Based: {},
-    Aigo: {},
+    Algo: {},
     Dataset: {},
     Builder: {},
     Validator: {},
   });
+
+  // 添加一个状态来控制动画
+  const [nodeDetailsVisible, setNodeDetailsVisible] = useState(false);
 
   // 将函数定义移到这里，在使用之前
   const generate25DigitID = () => {
@@ -86,40 +91,40 @@ const HomePage: React.FC = () => {
     {
       nodeData: {
         nodeId: generate25DigitID(),
-        name: 'Base Model',
+        name: BASEMODEL,
       },
       children: [
         {
           nodeData: {
             nodeId: generate25DigitID(),
-            name: 'V2',
+            name: BASEMODEL_V2,
           },
           children: [
             {
               nodeData: {
                 nodeId: generate25DigitID(),
-                name: 'V2.1',
-                  },
-                  children: [],
-                },
-                {
-                  nodeData: {
-                    nodeId: generate25DigitID(),
-                name: 'V2.2',
-                  },
-                  children: [],
+                name: BASEMODEL_V2_1,
+              },
+              children: [],
+            },
+            {
+              nodeData: {
+                nodeId: generate25DigitID(),
+                name: BASEMODEL_V2_2,
+              },
+              children: [],
             },
           ],
         },
         {
           nodeData: {
             nodeId: generate25DigitID(),
-            name: 'V3',
-                  },
-                  children: [],
-                },
-              ],
-            },
+            name: BASEMODEL_V3,
+          },
+          children: [],
+        },
+      ],
+    },
   ]);
 
   const random4Digits = () => {
@@ -135,16 +140,16 @@ const HomePage: React.FC = () => {
       let basedPercent = baseContributionRef.current.Based;
       let datasetPercent = baseContributionRef.current.DATASET;
 
-      if (modelName === 'Base Model') {
+      if (modelName === BASEMODEL) {
         return baseContributionRef.current;
       }
 
-      if (modelName.startsWith('V2')) {
+      if (modelName.startsWith(BASEMODEL_V2)) {
         level = 1;
         if (modelName.includes('.')) {
           level = 2;
         }
-      } else if (modelName.startsWith('V3')) {
+      } else if (modelName.startsWith(BASEMODEL_V3)) {
         level = 1;
         if (modelName.includes('.')) {
           level = 2;
@@ -155,9 +160,9 @@ const HomePage: React.FC = () => {
       basedPercent = baseContributionRef.current.Based - reduction;
       datasetPercent = baseContributionRef.current.DATASET + reduction;
 
-    return {
+      return {
         Based: basedPercent,
-        AIGO: baseContributionRef.current.AIGO,
+        ALGO: baseContributionRef.current.ALGO,
         DATASET: datasetPercent,
         Builder: baseContributionRef.current.Builder,
         Validator: baseContributionRef.current.Validator,
@@ -197,39 +202,39 @@ const HomePage: React.FC = () => {
 
     // 确保每个节点都有 Incentives 数据
     const incentives = [
-        {
-          modelId: '',
-          name: `${model?.name}.3`,
-          rate: '15%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: `${model?.name}.2`,
-          rate: '15%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: `${model?.name}.1`,
-          rate: '20%',
-          reward: `${random4Digits()}`,
-        },
-        {
-          modelId: '',
-          name: model?.name,
-          rate: '50%',
-          reward: `${random4Digits()}`,
-        },
+      {
+        modelId: '',
+        name: `${model?.name}.3`,
+        rate: '15%',
+        reward: `${random4Digits()}`,
+      },
+      {
+        modelId: '',
+        name: `${model?.name}.2`,
+        rate: '15%',
+        reward: `${random4Digits()}`,
+      },
+      {
+        modelId: '',
+        name: `${model?.name}.1`,
+        rate: '20%',
+        reward: `${random4Digits()}`,
+      },
+      {
+        modelId: '',
+        name: model?.name,
+        rate: '50%',
+        reward: `${random4Digits()}`,
+      },
     ];
 
     return {
       modelId: '',
       name: model?.name,
-      parentModel: model?.name === 'Base Model' ? '' : 
-                  model?.name.startsWith('V2.') ? 'V2' : 
-                  'Base Model',
-      ...commonData, 
+      parentModel: model?.name === BASEMODEL ? '' :
+        model?.name.startsWith(BASEMODEL_V2) ? BASEMODEL_V2 :
+          BASEMODEL,
+      ...commonData,
       Incentives: incentives, // 确保 Incentives 被正确设置
       contributions: contributionData,
     };
@@ -240,7 +245,7 @@ const HomePage: React.FC = () => {
     const processNode = (node, parentId = null, level = 0, index = 0) => {
       const { nodeData, children } = node;
       const { nodeId, name, isNewNode } = nodeData;
-      
+
       // 确定节点类型
       let type = 'assignment';
       if (level === 0) {
@@ -249,7 +254,7 @@ const HomePage: React.FC = () => {
         // 如果是新节点，使用新的节点类型
         type = 'new-white-node';
       }
-      
+
       // 创建节点
       const nodeObj = {
         id: nodeId,
@@ -261,10 +266,10 @@ const HomePage: React.FC = () => {
           rawData: node, // 保存原始数据
         },
       };
-      
+
       // 添加节点
       nodes.push(nodeObj);
-      
+
       // 如果有父节点，创建边
       if (parentId) {
         const edgeId = `edge-${parentId}-${nodeId}`;
@@ -276,7 +281,7 @@ const HomePage: React.FC = () => {
         };
         edges.push(edge);
       }
-      
+
       // 处理子节点
       if (children && children.length > 0) {
         children.forEach((child, childIndex) => {
@@ -284,21 +289,21 @@ const HomePage: React.FC = () => {
         });
       }
     };
-    
+
     treeData.forEach((tree, index) => {
       processNode(tree, null, 0, index);
     });
-    
+
     return { nodes, edges };
   };
 
   const countTotalNodes = () => {
     let count = 0;
     const countNodes = (tree) => {
-      count++; 
-      tree.children.forEach(child => countNodes(child)); 
+      count++;
+      tree.children.forEach(child => countNodes(child));
     };
-    
+
     testPrimitiveData.forEach(tree => countNodes(tree));
 
     totalModelsRef.current = count;
@@ -307,13 +312,13 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     const initialTotalModels = countTotalNodes();
-    totalModelsRef.current = initialTotalModels; 
-    
+    totalModelsRef.current = initialTotalModels;
+
     setInfoData({
       ...infoDefaultData,
       TotalModels: initialTotalModels
     });
-    
+
     const initialData = {};
     testPrimitiveData.forEach(tree => {
       const stack = [tree];
@@ -324,7 +329,7 @@ const HomePage: React.FC = () => {
       }
     });
     setModelsContributions(initialData);
-    setNodeInfoData(initialData['Base Model']);
+    setNodeInfoData(initialData[BASEMODEL]);
   }, []);
 
   useEffect(() => {
@@ -362,8 +367,8 @@ const HomePage: React.FC = () => {
 
         setSelectedNodeId(nodeId);
 
-        console.log("测试点击1 =",manuallyModifiedNodes)
-        
+        console.log("测试点击1 =", manuallyModifiedNodes)
+
         let modelInfo;
         const isModified = manuallyModifiedNodes.includes(nodeName);
         if (nodeName && modelsContributionsRef.current[nodeName]) {
@@ -372,7 +377,7 @@ const HomePage: React.FC = () => {
             modelInfo.isManuallyModified = true;
 
           }
-        } 
+        }
         else if (nodeName && modelsContributions[nodeName]) {
 
           modelInfo = JSON.parse(JSON.stringify(modelsContributions[nodeName]));
@@ -386,7 +391,7 @@ const HomePage: React.FC = () => {
             [nodeName]: modelInfo
           };
 
-          modelsContributionsRef.current = updatedContributions; 
+          modelsContributionsRef.current = updatedContributions;
           setModelsContributions(updatedContributions);
         }
         if (!modelInfo.name) {
@@ -394,14 +399,14 @@ const HomePage: React.FC = () => {
         }
 
         setNodeInfoData(modelInfo);
-        setShowNodeDetails(true); 
-        setShowChatModel({
-          showModel: true,
-          data: data?.data?.properties?.rawData,
-        });
-        
+        setShowNodeDetails(true);
+        // setShowChatModel({
+        //   showModel: true,
+        //   data: data?.data?.properties?.rawData,
+        // });
+
         clickTimer = null;
-      lastClickTime = now;
+        lastClickTime = now;
       }, CLICK_DELAY);
     });
 
@@ -412,56 +417,61 @@ const HomePage: React.FC = () => {
         clickTimer = null;
       }
 
-      const nodeId = data?.data?.id;
-      const nodeName = data?.data?.properties?.rawData?.nodeData?.name;
-      
-      if (!nodeName) {
-        message.error('cannot get node info');
-        return;
-      }
+      setShowChatModel({
+        showModel: true,
+        data: data?.data?.properties?.rawData,
+      });
 
-      setSelectedNodeId(nodeId);
-      
-      let modelInfo;
-      const isModified = manuallyModifiedNodes.includes(nodeName);
-      if (nodeName && modelsContributionsRef.current[nodeName]) {
-        modelInfo = JSON.parse(JSON.stringify(modelsContributionsRef.current[nodeName]));
-        if (isModified) {
-          modelInfo.isManuallyModified = true;
-        }
-      }
-      else if (nodeName && modelsContributions[nodeName]) {
-        modelInfo = JSON.parse(JSON.stringify(modelsContributions[nodeName]));
-        if (isModified) {
-          modelInfo.isManuallyModified = true;
-        }
-      } else {
-        modelInfo = modelData(data?.data?.properties?.rawData?.nodeData);
-        const updatedContributions = {
-          ...modelsContributions,
-          [nodeName]: modelInfo
-        };
-        modelsContributionsRef.current = updatedContributions; 
-        setModelsContributions(updatedContributions);
-      }
-      if (!modelInfo.name) {
-        modelInfo.name = nodeName;
-      }
-      
-      if (!modelInfo.contributions) {
-        message.error('modelInfo.contributions is empty');
-        return;
-      }
-      
-      setNodeInfoData(modelInfo);
-      setShowNodeDetails(true); 
-      setShowModelEvolution(true);
+      // const nodeId = data?.data?.id;
+      // const nodeName = data?.data?.properties?.rawData?.nodeData?.name;
+
+      // if (!nodeName) {
+      //   message.error('cannot get node info');
+      //   return;
+      // }
+
+      // setSelectedNodeId(nodeId);
+
+      // let modelInfo;
+      // const isModified = manuallyModifiedNodes.includes(nodeName);
+      // if (nodeName && modelsContributionsRef.current[nodeName]) {
+      //   modelInfo = JSON.parse(JSON.stringify(modelsContributionsRef.current[nodeName]));
+      //   if (isModified) {
+      //     modelInfo.isManuallyModified = true;
+      //   }
+      // }
+      // else if (nodeName && modelsContributions[nodeName]) {
+      //   modelInfo = JSON.parse(JSON.stringify(modelsContributions[nodeName]));
+      //   if (isModified) {
+      //     modelInfo.isManuallyModified = true;
+      //   }
+      // } else {
+      //   modelInfo = modelData(data?.data?.properties?.rawData?.nodeData);
+      //   const updatedContributions = {
+      //     ...modelsContributions,
+      //     [nodeName]: modelInfo
+      //   };
+      //   modelsContributionsRef.current = updatedContributions;
+      //   setModelsContributions(updatedContributions);
+      // }
+      // if (!modelInfo.name) {
+      //   modelInfo.name = nodeName;
+      // }
+
+      // if (!modelInfo.contributions) {
+      //   message.error('modelInfo.contributions is empty');
+      //   return;
+      // }
+
+      // setNodeInfoData(modelInfo);
+      // setShowNodeDetails(true);
+      // setShowModelEvolution(true);
     });
   };
 
   const resetAllNodesStyle = (lf) => {
     if (!lf || !lf.getGraphData) return;
-    
+
     const graphData = lf.getGraphData();
     graphData.nodes.forEach(node => {
       lf.setProperties(node.id, { selected: false });
@@ -470,7 +480,7 @@ const HomePage: React.FC = () => {
 
   const highlightNode = (lf, nodeId) => {
     if (!lf || !lf.setProperties) return;
-    
+
     try {
       lf.setProperties(nodeId, { selected: true });
     } catch (error) {
@@ -549,7 +559,7 @@ const HomePage: React.FC = () => {
   const renderNodeDetails = (nodeData) => {
     const colorMap = {
       Based: '#5B8FF9',
-      AIGO: '#5AD8A6',
+      ALGO: '#5AD8A6',
       DATASET: '#5D7092',
       Builder: '#F6BD16',
       Validator: '#E8684A',
@@ -562,16 +572,16 @@ const HomePage: React.FC = () => {
           <span style={{ color: colorMap.ModelName }}>
             {nodeData?.name}
           </span>
-      </Descriptions.Item>
+        </Descriptions.Item>
 
         <Descriptions.Item label={<span style={{ color: colorMap.Based }}>Based</span>}>
           <span style={{ color: colorMap.Based }}>
             {nodeData?.contributions?.Based}%
           </span>
         </Descriptions.Item>
-        <Descriptions.Item label={<span style={{ color: colorMap.AIGO }}>AIGO</span>}>
-          <span style={{ color: colorMap.AIGO }}>
-            {nodeData?.contributions?.AIGO}%
+        <Descriptions.Item label={<span style={{ color: colorMap.ALGO }}>ALGO</span>}>
+          <span style={{ color: colorMap.ALGO }}>
+            {nodeData?.contributions?.ALGO}%
           </span>
         </Descriptions.Item>
         <Descriptions.Item label={<span style={{ color: colorMap.DATASET }}>DATASET</span>}>
@@ -601,49 +611,54 @@ const HomePage: React.FC = () => {
 
     const data = [
       { name: 'Based', value: parseInt(nodeData.contributions.Based, 10) || 0 },
-      { name: 'AIGO', value: parseInt(nodeData.contributions.AIGO, 10) || 0 },
+      { name: 'ALGO', value: parseInt(nodeData.contributions.ALGO, 10) || 0 },
       { name: 'DATASET', value: parseInt(nodeData.contributions.DATASET, 10) || 0 },
       { name: 'Builder', value: parseInt(nodeData.contributions.Builder, 10) || 0 },
       { name: 'Validator', value: parseInt(nodeData.contributions.Validator, 10) || 0 },
     ];
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-    const total = data.reduce((a, b) => a + b.value, 0);
+    const colorMap = {
+      Based: '#5B8FF9',
+      ALGO: '#5AD8A6',
+      DATASET: '#5D7092',
+      Builder: '#F6BD16',
+      Validator: '#E8684A',
+      ModelName: '#0056b3',
+    };
 
-    // 简洁的内部百分比标签
-    const renderCustomizedInnerLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    // 确保每个值都是实际的百分比值
+    const renderCustomizedInnerLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value }) => {
       const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
       const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
       const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
-      
-      if (percent < 0.05) return null;
-      
+
+      if (value < 5) return null; // 如果百分比小于5%则不显示标签
+
       return (
-        <text 
-          x={x} 
-          y={y} 
-          fill="white" 
-          textAnchor="middle" 
+        <text
+          x={x}
+          y={y}
+          fill="white"
+          textAnchor="middle"
           dominantBaseline="central"
-          style={{ 
-            fontWeight: 'bold', 
-            fontSize: percent > 0.1 ? '16px' : '12px',
+          style={{
+            fontWeight: 'bold',
+            fontSize: value > 10 ? '16px' : '12px',
             textShadow: '0px 0px 2px rgba(0,0,0,0.7)'
           }}
         >
-          {`${(percent * 100).toFixed(0)}%`}
+          {`${value}%`}
         </text>
       );
     };
 
     return (
-      <div style={{ 
-        width: '100%', 
-        height: 300, 
+      <div style={{
+        width: '100%',
+        height: 300,
         display: 'flex',
-        justifyContent: 'center' // 居中显示
+        justifyContent: 'center'
       }}>
-        {/* 增加容器宽度 */}
         <div style={{ width: '80%', height: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -660,17 +675,20 @@ const HomePage: React.FC = () => {
                 paddingAngle={2}
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={colorMap[entry.name]}
+                  />
                 ))}
               </Pie>
-              <Tooltip 
-                formatter={(value, name) => [`${(value / total * 100).toFixed(0)}%`, name]} 
+              <Tooltip
+                formatter={(value, name) => [`${value}%`, name]}
               />
-              <Legend 
+              {/* <Legend 
                 layout="horizontal" 
                 align="center" 
                 verticalAlign="bottom"
-              />
+              /> */}
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -680,24 +698,23 @@ const HomePage: React.FC = () => {
 
   const initializeContributionData = (nodeName: string) => {
     const nodeContributions = modelsContributions[nodeName]?.contributions || {};
-    
+
     const newCategoryPercentages = {
       Based: { [nodeName]: nodeContributions.Based || 0 },
-      Aigo: { [nodeName]: nodeContributions.AIGO || 0 },
+      Algo: { [nodeName]: nodeContributions.ALGO || 0 },
       Dataset: { [nodeName]: nodeContributions.DATASET || 0 },
       Builder: { [nodeName]: nodeContributions.Builder || 0 },
       Validator: { [nodeName]: nodeContributions.Validator || 0 },
     };
 
-    // 如果是新节点且没有贡献数据，尝试从 nodeInfoData 获取
     if (Object.values(nodeContributions).every(v => !v) && nodeInfoData?.contributions) {
       newCategoryPercentages.Based[nodeName] = nodeInfoData.contributions.Based || 0;
-      newCategoryPercentages.Aigo[nodeName] = nodeInfoData.contributions.AIGO || 0;
+      newCategoryPercentages.Algo[nodeName] = nodeInfoData.contributions.ALGO || 0;
       newCategoryPercentages.Dataset[nodeName] = nodeInfoData.contributions.DATASET || 0;
       newCategoryPercentages.Builder[nodeName] = nodeInfoData.contributions.Builder || 0;
       newCategoryPercentages.Validator[nodeName] = nodeInfoData.contributions.Validator || 0;
     }
-    
+
     setCategoryPercentages(newCategoryPercentages);
   };
 
@@ -707,22 +724,19 @@ const HomePage: React.FC = () => {
       return;
     }
 
-    // 初始化贡献数据
     initializeContributionData(nodeInfoData.name);
     setIsModalVisible(true);
   };
 
   const handleModalOk = () => {
     if (!nodeInfoData?.name) return;
-
-    // 更新 modelsContributions
     const updatedContributions = {
       ...modelsContributions,
       [nodeInfoData.name]: {
         ...modelsContributions[nodeInfoData.name],
         contributions: {
           Based: categoryPercentages.Based[nodeInfoData.name] || 0,
-          AIGO: categoryPercentages.Aigo[nodeInfoData.name] || 0,
+          ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
           DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
           Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
           Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
@@ -735,14 +749,14 @@ const HomePage: React.FC = () => {
       if (tree.nodeData.name === nodeInfoData.name) {
         tree.nodeData.contributions = {
           Based: categoryPercentages.Based[nodeInfoData.name] || 0,
-          AIGO: categoryPercentages.Aigo[nodeInfoData.name] || 0,
+          ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
           DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
           Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
           Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
         };
         return true;
       }
-      
+
       for (const child of tree.children) {
         if (updateNodeInTree(child)) {
           return true;
@@ -751,14 +765,12 @@ const HomePage: React.FC = () => {
       return false;
     };
 
-    // 更新树中的节点数据
     const updatedPrimitiveData = [...testPrimitiveData];
     updatedPrimitiveData.forEach(tree => updateNodeInTree(tree));
 
-    // 更新状态
     setModelsContributions(updatedContributions);
     setTestPrimitiveData(updatedPrimitiveData);
-    
+
     // 如果当前显示的节点信息就是被修改的节点，更新显示
     if (nodeInfoData.name === nodeInfoData?.name) {
       setNodeInfoData({
@@ -781,14 +793,14 @@ const HomePage: React.FC = () => {
 
   const handlePercentageChange = (value: number, key: string) => {
     setPercentages((prev) => ({
-        ...prev,
-        [key]: value,
+      ...prev,
+      [key]: value,
     }));
 
     // 更新对应节点的 reward 值
     const updatedContributions = { ...modelsContributions };
     if (updatedContributions[key]) {
-        updatedContributions[key].Incentives[0].reward = `${random4Digits()}`;
+      updatedContributions[key].Incentives[0].reward = `${random4Digits()}`;
     }
     setModelsContributions(updatedContributions);
   };
@@ -844,13 +856,13 @@ const HomePage: React.FC = () => {
         });
         return true;
       }
-      
+
       for (let i = 0; i < node.children.length; i++) {
         if (addChildToNode(node.children[i], parentName)) {
           return true;
         }
       }
-      
+
       return false;
     };
     let nodeAdded = false;
@@ -859,27 +871,27 @@ const HomePage: React.FC = () => {
         nodeAdded = true;
       }
     });
-    
+
     if (!nodeAdded) {
       console.error(`Can't find parent node: ${parentName}`);
       return;
     }
-    
+
     setTestPrimitiveData(updatedPrimitiveData);
 
     if (lf) {
       const { nodes, edges } = transformTreeToFlowData(updatedPrimitiveData);
-      
+
       // 找到新节点
       const newNode = nodes.find(node => node.id === newNodeId);
       if (newNode) {
         // 只设置节点名称，不包含训练信息
         newNode.text.value = newNodeName;
       }
-    
+
       console.log("Transformed flow data:", { nodes, edges });
       lf.render({ nodes, edges });
-      
+
       // 创建一个单独的倒计时元素
       const countdownElement = document.createElement('div');
       countdownElement.id = `countdown-${newNodeId}`;
@@ -894,24 +906,15 @@ const HomePage: React.FC = () => {
       countdownElement.style.fontSize = '12px';
       countdownElement.style.color = '#666666';
       countdownElement.style.pointerEvents = 'none'; // 确保不会干扰鼠标事件
-      
-      // 添加旋转图标
-      const iconElement = document.createElement('span');
-      iconElement.innerHTML = '🔄';
-      iconElement.style.marginRight = '4px';
-      iconElement.style.display = 'inline-block';
-      iconElement.style.animation = 'rotate 1.5s linear infinite';
-      
+
       // 添加倒计时文本
       const textElement = document.createElement('span');
       textElement.innerHTML = 'training... (06:00:00)';
-      
-      countdownElement.appendChild(iconElement);
       countdownElement.appendChild(textElement);
-      
+
       // 添加到文档中
       document.body.appendChild(countdownElement);
-      
+
       // 添加旋转动画样式
       const styleElement = document.createElement('style');
       styleElement.innerHTML = `
@@ -925,19 +928,19 @@ const HomePage: React.FC = () => {
         }
       `;
       document.head.appendChild(styleElement);
-      
+
       // 倒计时逻辑
       const updateCountdown = () => {
         const now = Date.now();
         const timeLeft = endTime - now;
-        
+
         if (timeLeft <= 0) {
           // 时间到，更新节点状态
           const node = lf.getNodeModelById(newNodeId);
           if (node) {
             // 只更新节点名称，不包含训练信息
             node.updateText(newNodeName);
-            
+
             // 获取当前属性
             const currentProps = node.getProperties();
             // 更新属性，保留原始数据
@@ -952,7 +955,7 @@ const HomePage: React.FC = () => {
                 }
               }
             });
-            
+
             // 重新渲染图形
             lf.render(lf.getGraphData());
           }
@@ -966,7 +969,7 @@ const HomePage: React.FC = () => {
 
         // 格式化时间
         const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
+
         // 更新节点文本，包含节点名称和训练信息
         const node = lf.getNodeModelById(newNodeId);
         if (node) {
@@ -981,10 +984,10 @@ const HomePage: React.FC = () => {
       setTimeout(() => {
         updateCountdown();
       }, 500);
-      
+
       // 监听画布变换事件，确保倒计时元素跟随节点移动
       lf.on('transform', updateCountdown);
-      
+
       // @ts-ignore
       lf?.extension.dagre.layout({
         nodesep: 15,
@@ -1012,20 +1015,20 @@ const HomePage: React.FC = () => {
             }
           }
         });
-        
+
         // 重新渲染图形
         lf.render(lf.getGraphData());
       }
-      
+
       // 移除倒计时元素
       const countdownElement = document.getElementById(`countdown-${newNodeId}`);
       if (countdownElement) {
         countdownElement.remove();
       }
-      
+
       // 移除事件监听
       lf.off('transform', updateCountdown);
-      
+
       // 更新数据模型
       const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));
       const updateNodeInTree = (node) => {
@@ -1033,22 +1036,22 @@ const HomePage: React.FC = () => {
           node.nodeData.isNewNode = false;
           return true;
         }
-        
+
         for (let i = 0; i < node.children.length; i++) {
           if (updateNodeInTree(node.children[i])) {
             return true;
           }
         }
-        
+
         return false;
       };
-      
+
       updatedPrimitiveData.forEach(tree => {
         updateNodeInTree(tree);
       });
-      
+
       setTestPrimitiveData(updatedPrimitiveData);
-      
+
       // 更新 modelsContributions
       const updatedContributions = { ...modelsContributions };
       if (updatedContributions[newNodeName]) {
@@ -1058,7 +1061,7 @@ const HomePage: React.FC = () => {
     }, 6 * 60 * 60 * 1000); // 6小时
   };
 
- 
+
   useEffect(() => {
     const updatedContributions = { ...modelsContributions };
     let hasChanges = false;
@@ -1068,28 +1071,28 @@ const HomePage: React.FC = () => {
       while (stack.length > 0) {
         const node = stack.pop();
         const nodeName = node.nodeData.name;
-        if (nodeName !== 'Base Model' && !manuallyModifiedNodes.includes(nodeName)) {
-        
+        if (nodeName !== BASEMODEL && !manuallyModifiedNodes.includes(nodeName)) {
+
           const recalculatedData = modelData(node.nodeData);
           updatedContributions[nodeName] = {
             ...updatedContributions[nodeName],
             contributions: recalculatedData.contributions
           };
-          
+
           hasChanges = true;
         }
-        
+
         node.children.forEach(child => stack.push(child));
       }
     });
 
     if (hasChanges) {
       setModelsContributions(updatedContributions);
-      if (nodeInfoData && nodeInfoData.name !== 'Base Model' && !manuallyModifiedNodes.includes(nodeInfoData.name)) {
+      if (nodeInfoData && nodeInfoData.name !== BASEMODEL && !manuallyModifiedNodes.includes(nodeInfoData.name)) {
         setNodeInfoData(updatedContributions[nodeInfoData.name]);
       }
     }
-  }, [baseContribution]); 
+  }, [baseContribution]);
 
 
 
@@ -1113,36 +1116,22 @@ const HomePage: React.FC = () => {
   }, [manuallyModifiedNodes]);
 
 
-  const findNodeDataInTree = (nodeName) => {
-    for (const tree of testPrimitiveData) {
-      const stack = [tree];
-      while (stack.length > 0) {
-        const node = stack.pop();
-        if (node.nodeData.name === nodeName) {
-          return node.nodeData;
-        }
-        node.children.forEach(child => stack.push(child));
-      }
-    }
-    return null;
-  };
-
 
   const renderModelEvolutionCard = () => {
     if (!showModelEvolution) return null;
-    
+
     return (
       <Card
         size={'small'}
         title={
-          <div style={{ 
-            fontSize: '14px', 
+          <div style={{
+            fontSize: '14px',
             fontWeight: 600,
             color: '#1890ff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '8px' 
+            gap: '8px'
           }}>
             <span>Model Evolution</span>
             <Button
@@ -1182,8 +1171,8 @@ const HomePage: React.FC = () => {
       >
         <Row gutter={[16, 8]}>
           <Col span={16}>
-            <Descriptions 
-              size={'small'} 
+            <Descriptions
+              size={'small'}
               column={1}
               labelStyle={{
                 color: '#666',
@@ -1223,38 +1212,38 @@ const HomePage: React.FC = () => {
                   <Select.Option value="David">David</Select.Option>
                 </Select>
               </Descriptions.Item>
-      </Descriptions>
+            </Descriptions>
           </Col>
-          <Col span={8} style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
+          <Col span={8} style={{
+            display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             gap: '8px'
           }}>
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               size="middle"
-              style={{ 
+              style={{
                 borderRadius: '6px',
                 fontWeight: 500,
                 fontSize: '13px',
                 height: '32px',
-              }} 
+              }}
               onClick={handleContributionWeightClick}
             >
               Contribution Weight
             </Button>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               gap: '8px',
               position: 'relative',
             }}>
-              <Button 
-                type="default" 
+              <Button
+                type="default"
                 size="middle"
-                style={{ 
+                style={{
                   flex: 1,
                   height: '32px',
                   borderRadius: '6px',
@@ -1271,7 +1260,7 @@ const HomePage: React.FC = () => {
               >
                 Train
                 {isAnimating && (
-                  <div 
+                  <div
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -1293,65 +1282,40 @@ const HomePage: React.FC = () => {
   };
 
 
-  const forceUpdateModelsContributions = () => {
-
-    const updatedContributions = {...modelsContributionsRef.current};
-    let hasChanges = false;
-    
-    manuallyModifiedNodes.forEach(nodeName => {
-      if (nodeName in updatedContributions) {
-        if (!updatedContributions[nodeName].isManuallyModified) {
-          updatedContributions[nodeName].isManuallyModified = true;
-          hasChanges = true;
-        }
-      } else {
-        const nodeData = findNodeDataInTree(nodeName);
-        if (nodeData) {
-
-          updatedContributions[nodeName] = modelData(nodeData);
-          updatedContributions[nodeName].isManuallyModified = true;
-          hasChanges = true;
-        }
-      }
-    });
-    
-    if (hasChanges) {
-      modelsContributionsRef.current = updatedContributions; 
-      setModelsContributions({...updatedContributions});
-    }
-  };
-
   useEffect(() => {
     modelsContributionsRef.current = modelsContributions;
   }, []);
 
   useEffect(() => {
     if (JSON.stringify(modelsContributionsRef.current) !== JSON.stringify(modelsContributions)) {
-      modelsContributionsRef.current = {...modelsContributions};
+      modelsContributionsRef.current = { ...modelsContributions };
     }
   }, [modelsContributions]);
 
   const ContributionWeightContent = () => {
-    const categories = ['Based', 'Aigo', 'Dataset', 'Builder', 'Validator'];
-    
+    const categories = ['Based', 'Algo', 'Dataset', 'Builder', 'Validator'];
+
+    // 添加一个state来存储Based的值，用于控制树形图更新
+    const [basedValue, setBasedValue] = useState(categoryPercentages['Based'][nodeInfoData?.name || ''] || 0);
+
     // 获取节点的父节点路径
     const getNodePath = (nodeName: string) => {
       const path: string[] = [];
-      
+
       const findParent = (name: string) => {
         for (const tree of testPrimitiveData) {
-          const stack = [{node: tree, path: []}];
+          const stack = [{ node: tree, path: [] }];
           while (stack.length > 0) {
-            const {node, path: currentPath} = stack.pop()!;
+            const { node, path: currentPath } = stack.pop()!;
             if (node.nodeData.name === name) {
-              return {found: true, path: [...currentPath, name]};
+              return { found: true, path: [...currentPath, name] };
             }
             for (const child of node.children) {
-              stack.push({node: child, path: [...currentPath, node.nodeData.name]});
+              stack.push({ node: child, path: [...currentPath, node.nodeData.name] });
             }
           }
         }
-        return {found: false, path: []};
+        return { found: false, path: [] };
       };
 
       const result = findParent(nodeName);
@@ -1368,27 +1332,86 @@ const HomePage: React.FC = () => {
     const calculateParentPercentages = (path: string[], category: string) => {
       const totalNodes = path.length;
       const percentagePerNode = totalNodes <= 1 ? 5 : Math.floor(5 / (totalNodes - 1));
-      
+
       return path.map((node, index) => {
         if (index === path.length - 1) return 0; // 当前节点不分配百分比
         return percentagePerNode;
       });
     };
 
-    // 根据路径生成树形显示
+    // 根据路径生成树形显示 - 使用basedValue而不是直接从categoryPercentages获取
     const getTreeDisplay = (category: string) => {
       if (!nodeInfoData?.name) return '';
+
+      if (category !== 'Based') {
+        const currentValue = categoryPercentages[category][nodeInfoData.name] || 0;
+        return `${nodeInfoData.name} (${currentValue}%)`;
+      }
+
       const path = getNodePath(nodeInfoData.name);
-      const parentPercentages = calculateParentPercentages(path, category);
-      
-      return path.map((node, index) => {
-        const percentage = index === path.length - 1 
-          ? categoryPercentages[category][nodeInfoData.name] || 0
-          : parentPercentages[index];
-        
-        // 即使是 base model 也添加缩进
-        return `${'-'.repeat(index)}${node === 'base model' ? '-' : ''}${node} (${percentage}%)`;
-      }).join('\n');
+      const totalNodes = path.length;
+      const treeLines: string[] = [];
+      const maxLength = Math.max(...path.map(name => name.length)) + 2;
+
+      // 生成加起来等于总和的随机分成
+      const generateDistribution = (total: number) => {
+        const types = ['Algo', 'Dataset', 'Builder', 'Validator'];
+        let remaining = total;
+        const distribution = {};
+
+        for (let i = 0; i < types.length - 1; i++) {
+          if (remaining <= 0) {
+            distribution[types[i]] = 0;
+            continue;
+          }
+          const minValue = Math.min(1, remaining);
+          const maxValue = remaining - (types.length - i - 1) * minValue;
+          const value = Math.floor(Math.random() * (maxValue - minValue + 1)) + minValue;
+          distribution[types[i]] = value;
+          remaining -= value;
+        }
+
+        distribution[types[types.length - 1]] = remaining;
+        return distribution;
+      };
+
+      for (let i = totalNodes - 1; i >= 0; i--) {
+        const node = path[i];
+        let percentage;
+
+        if (i === totalNodes - 1) {
+          // 使用basedValue而不是从categoryPercentages获取
+          percentage = basedValue;
+        } else {
+          const childPercentage = treeLines[0].match(/\((\d+)%\)/);
+          const maxPercentage = childPercentage ? Math.min(8, parseInt(childPercentage[1], 10)) : 8;
+          percentage = Math.floor(Math.random() * (maxPercentage)) + 1;
+        }
+
+        const distribution = generateDistribution(percentage);
+
+        // 使用更短的固定宽度，只在节点名称后添加少量空格
+        const paddedNode = node.padEnd(maxLength, '');
+        const line = `${paddedNode}(${percentage}%)`;  // 移除了额外的空格
+        treeLines.push(line);
+
+        if (i > 0) {
+          const prefix = '   |   ';
+          treeLines.push(`${prefix}${node}-Algo:     ${distribution.Algo}%`);
+          treeLines.push(`${prefix}${node}-Dataset:  ${distribution.Dataset}%`);
+          treeLines.push(`${prefix}${node}-Builder:  ${distribution.Builder}%`);
+          treeLines.push(`${prefix}${node}-Validator:${distribution.Validator}%`);
+          treeLines.push('   |');
+        } else {
+          const prefix = '       ';
+          treeLines.push(`${prefix}${node}-Algo:     ${distribution.Algo}%`);
+          treeLines.push(`${prefix}${node}-Dataset:  ${distribution.Dataset}%`);
+          treeLines.push(`${prefix}${node}-Builder:  ${distribution.Builder}%`);
+          treeLines.push(`${prefix}${node}-Validator:${distribution.Validator}%`);
+        }
+      }
+
+      return treeLines.join('\n');
     };
 
     // 处理单个类别的百分比变化
@@ -1399,12 +1422,13 @@ const HomePage: React.FC = () => {
       const parentPercentages = calculateParentPercentages(path, category);
       const totalParentPercentage = parentPercentages.reduce((sum, p) => sum + p, 0);
 
-      // 检查是否超过可用百分比（100 - 父节点总百分比）
+      // 检查是否超过可用百分比
       if (value > (100 - totalParentPercentage)) {
         message.error(`Maximum available percentage is ${100 - totalParentPercentage}%`);
         return;
       }
 
+      // 更新类别百分比
       const newCategoryPercentages = {
         ...categoryPercentages,
         [category]: {
@@ -1413,12 +1437,17 @@ const HomePage: React.FC = () => {
         }
       };
       setCategoryPercentages(newCategoryPercentages);
+
+      // 如果是Based类别，同时更新basedValue
+      if (category === 'Based') {
+        setBasedValue(value);
+      }
     };
 
     // 计算总百分比（包括父节点的百分比）
     const getTotalPercentage = () => {
       if (!nodeInfoData?.name) return 0;
-      
+
       let total = 0;
       categories.forEach(category => {
         const path = getNodePath(nodeInfoData.name);
@@ -1426,7 +1455,7 @@ const HomePage: React.FC = () => {
         const parentTotal = parentPercentages.reduce((sum, p) => sum + p, 0);
         total += parentTotal + (categoryPercentages[category][nodeInfoData.name] || 0);
       });
-      
+
       return total;
     };
 
@@ -1434,76 +1463,121 @@ const HomePage: React.FC = () => {
     const canConfirm = getTotalPercentage() === 100;
 
     return (
-      <div style={{ 
-        backgroundColor: '#fafafa',
-        padding: '16px',
-        borderRadius: '8px',
+      <div style={{
+        backgroundColor: '#fff',
+        padding: '24px',
+        borderRadius: '12px',
+        width: '95%',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
       }}>
-        <div style={{ 
-          display: 'grid',
-          gridTemplateColumns: '120px 90px 1fr',
-          gap: '24px', // 增加间距
-          marginBottom: '12px',
-          fontWeight: 'bold',
-          color: '#666'
+        {/* 顶部类别选择区域 - 分为两行 */}
+        <div style={{
+          marginBottom: '24px',
+          padding: '16px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '8px',
+          border: '1px solid #e9ecef'
         }}>
-          <span>Category</span>
-          <span style={{textAlign: 'center'}}>Weight</span>
-          <span style={{paddingLeft: '20px'}}>Distribution</span> {/* 添加左边距 */}
+          {/* 第一行：类别标题 */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }}>
+            {categories.map(category => (
+              <div key={`title-${category}`} style={{
+                flex: 1,
+                textAlign: 'center',
+                fontWeight: '600',
+                color: '#1f2937',
+                fontSize: '14px',
+                padding: '4px 12px',
+                backgroundColor: category === 'Based' ? '#e3f2fd' : '#e5e7eb',
+                borderRadius: '16px',
+                margin: '0 8px'
+              }}>
+                {category}
+              </div>
+            ))}
+          </div>
+
+          {/* 第二行：下拉框 */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between'
+          }}>
+            {categories.map(category => (
+              <div key={`select-${category}`} style={{ flex: 1, textAlign: 'center' }}>
+                <Select
+                  value={categoryPercentages[category][nodeInfoData?.name || ''] || 0}
+                  onChange={(value) => handleCategoryChange(value, category)}
+                  style={{
+                    width: '80%',
+                    maxWidth: '120px'
+                  }}
+                  bordered={false}
+                  className="contribution-select"
+                >
+                  {Array.from({ length: 21 }, (_, i) => i * 5).map((value) => (
+                    <Select.Option key={value} value={value}>
+                      {value}%
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {categories.map(category => {
-          const path = getNodePath(nodeInfoData?.name || '');
-          const parentPercentages = calculateParentPercentages(path, category);
-          const totalParentPercentage = parentPercentages.reduce((sum, p) => sum + p, 0);
-          const maxAvailable = 100 - totalParentPercentage;
-
-          return (
-            <div key={category} style={{ 
-              display: 'grid',
-              gridTemplateColumns: '120px 90px 1fr',
-              gap: '24px', // 增加间距
-              marginBottom: '12px',
-              alignItems: 'center'
-            }}>
-              <span style={{
-                fontWeight: 500,
-                color: '#5B8FF9',
-              }}>{category}</span>
-              
-              <Select
-                value={categoryPercentages[category][nodeInfoData?.name || ''] || 0}
-                onChange={(value) => handleCategoryChange(value, category)}
-                style={{ width: 90 }}
-                status={!canConfirm ? 'error' : undefined}
-              >
-                {Array.from({ length: Math.floor(maxAvailable / 5) + 1 }, (_, i) => i * 5).map((value) => (
-                  <Select.Option key={value} value={value}>
-                    {value}%
-                  </Select.Option>
-                ))}
-              </Select>
-
-              <div style={{
-                fontFamily: 'monospace',
-                whiteSpace: 'pre',
-                color: '#666',
-                fontSize: '13px',
-                paddingLeft: '20px' // 添加左边距
-              }}>
-                {getTreeDisplay(category)}
-              </div>
-            </div>
-          );
-        })}
-
+        {/* Based树形图区域 */}
         <div style={{
-          marginTop: '16px',
-          color: !canConfirm ? '#ff4d4f' : '#52c41a',
-          textAlign: 'right'
+          padding: '20px',
+          backgroundColor: '#f0f7ff',
+          borderRadius: '12px',
+          border: '1px solid #e6f0f9',
+          marginBottom: '16px'
         }}>
-          Total: {getTotalPercentage()}%
-          {!canConfirm && <span style={{marginLeft: '8px'}}>Must be 100%</span>}
+          <div style={{
+            fontFamily: 'Consolas, monospace',
+            whiteSpace: 'pre',
+            color: '#374151',
+            fontSize: '13px',
+            lineHeight: '1.6',
+            backgroundColor: '#fff',
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+          }}>
+            {getTreeDisplay('Based')}
+          </div>
+        </div>
+
+        {/* 总计区域 */}
+        <div style={{
+          padding: '12px',
+          borderRadius: '8px',
+          backgroundColor: !canConfirm ? '#fff1f0' : '#f6ffed',
+          border: `1px solid ${!canConfirm ? '#ffccc7' : '#b7eb8f'}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span style={{
+            color: !canConfirm ? '#cf1322' : '#389e0d',
+            fontWeight: '500'
+          }}>
+            Total: {getTotalPercentage()}%
+          </span>
+          {!canConfirm && (
+            <span style={{
+              color: '#cf1322',
+              fontSize: '13px'
+            }}>
+              Must be 100%
+            </span>
+          )}
         </div>
       </div>
     );
@@ -1547,6 +1621,17 @@ const HomePage: React.FC = () => {
     </div>
   );
 
+  // 在 useEffect 中监听 showNodeDetails 变化
+  useEffect(() => {
+    if (showNodeDetails) {
+      // 先显示容器，然后触发动画
+      setNodeDetailsVisible(true);
+    } else {
+      // 当关闭时，先执行动画，再隐藏组件
+      setNodeDetailsVisible(false);
+    }
+  }, [showNodeDetails]);
+
   return (
     <PageContainer
       pageHeaderRender={false}
@@ -1576,6 +1661,31 @@ const HomePage: React.FC = () => {
             background-size: 200% 100%;
             animation: fillAnimation 5s linear forwards;
           }
+
+          .contribution-select .ant-select-selector {
+            background-color: #f8f9fa !important;
+            border-radius: 4px !important;
+            transition: all 0.3s !important;
+          }
+          
+          .contribution-select:hover .ant-select-selector {
+            background-color: #e9ecef !important;
+          }
+          
+          .contribution-select .ant-select-selection-item {
+            font-weight: 500 !important;
+            color: #1f2937 !important;
+            text-align: center !important;
+          }
+
+          @keyframes slideIn {
+            from {
+              transform: translateX(100%);
+            }
+            to {
+              transform: translateX(0);
+            }
+          }
         `}
       </style>
       <div
@@ -1597,8 +1707,8 @@ const HomePage: React.FC = () => {
           border: 'none',
         }}
       >
-        <Descriptions 
-          size={'small'} 
+        <Descriptions
+          size={'small'}
           column={1}
           labelStyle={{
             fontWeight: 600,
@@ -1608,7 +1718,7 @@ const HomePage: React.FC = () => {
             paddingRight: '8px',
           }}
           contentStyle={{
-            color: '#0056b3', 
+            color: '#0056b3',
             fontWeight: 500,
             width: '50%',
             display: 'inline-block',
@@ -1636,49 +1746,200 @@ const HomePage: React.FC = () => {
       {renderModelEvolutionCard()}
 
       {showNodeDetails && (
-      <Card
-        size={'small'}
-        title={
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}>
-            <span>Node Details</span>
-            <Button
-              type="text"
-              icon={<CloseOutlined />}
-              size="small"
-              onClick={() => setShowNodeDetails(false)}
-              style={{
-                color: '#999',
-              }}
-            />
-          </div>
-        }
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          width: '300px',
-          height: '480px',
-          zIndex: 2,
-          overflow: 'hidden',
-          borderRadius: '12px',
-          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
-          backgroundColor: '#ffffff',
-          padding: '16px',
-        }}
-      >
-        {renderNodeDetails(nodeInfoData)}
-        <div style={{ height: '250px', marginTop: '10px' }}> 
-          {renderContributionPieChart(nodeInfoData)}
+        <div 
+          className="node-details-container"
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            width: '350px',
+            height: '850px',
+            zIndex: 2,
+            transition: 'transform 0.3s ease-in-out',
+            transform: nodeDetailsVisible ? 'translateX(0)' : 'translateX(100%)',
+          }}
+        >
+          <Card
+            size={'small'}
+            title={
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <span>Node Details</span>
+                <Button
+                  type="text"
+                  icon={<CloseOutlined />}
+                  size="small"
+                  onClick={() => {
+                    // 先触发动画，然后在动画结束后隐藏
+                    setNodeDetailsVisible(false);
+                    setTimeout(() => {
+                      setShowNodeDetails(false);
+                    }, 300); // 与过渡时间相同
+                  }}
+                  style={{
+                    color: '#999',
+                  }}
+                />
+              </div>
+            }
+            style={{
+              width: '100%',
+              height: '100%',
+              overflow: 'auto',
+              borderRadius: '12px',
+              boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
+              backgroundColor: '#ffffff',
+              padding: '16px',
+            }}
+          >
+            {renderNodeDetails(nodeInfoData)}
+            <div style={{ height: '250px', marginTop: '10px' }}>
+              {renderContributionPieChart(nodeInfoData)}
+            </div>
+
+            {/* 添加下拉框和按钮区域 */}
+            <div style={{
+              marginTop: '20px',
+              borderTop: '1px solid #f0f0f0',
+              paddingTop: '16px'
+            }}>
+              {/* Model Algorithm 下拉框 */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{
+                  marginBottom: '4px',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#333'
+                }}>
+                  Model Algorithm:
+                </div>
+                <Select
+                  style={{ width: '100%' }}
+                  placeholder="Select algorithm"
+                  defaultValue={nodeInfoData?.algorithm || undefined}
+                  size="small"
+                >
+                  <Select.Option value="transformer">Transformer</Select.Option>
+                  <Select.Option value="cnn">CNN</Select.Option>
+                  <Select.Option value="rnn">RNN</Select.Option>
+                  <Select.Option value="lstm">LSTM</Select.Option>
+                  <Select.Option value="gpt">GPT</Select.Option>
+                </Select>
+              </div>
+
+              {/* Dataset 下拉框 */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{
+                  marginBottom: '4px',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#333'
+                }}>
+                  Dataset:
+                </div>
+                <Select
+                  style={{ width: '100%' }}
+                  placeholder="Select dataset"
+                  defaultValue={nodeInfoData?.dataset?.id || undefined}
+                  size="small"
+                >
+                  <Select.Option value="dataset1">Common Crawl</Select.Option>
+                  <Select.Option value="dataset2">Wikipedia</Select.Option>
+                  <Select.Option value="dataset3">Books</Select.Option>
+                  <Select.Option value="dataset4">Code</Select.Option>
+                </Select>
+              </div>
+
+              {/* Builder 下拉框 */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{
+                  marginBottom: '4px',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#333'
+                }}>
+                  Builder:
+                </div>
+                <Select
+                  style={{ width: '100%' }}
+                  placeholder="Select builder"
+                  defaultValue={nodeInfoData?.builder || undefined}
+                  size="small"
+                >
+                  <Select.Option value="builder1">Team Alpha</Select.Option>
+                  <Select.Option value="builder2">Team Beta</Select.Option>
+                  <Select.Option value="builder3">Team Gamma</Select.Option>
+                  <Select.Option value="builder4">Individual</Select.Option>
+                </Select>
+              </div>
+
+              {/* 按钮区域 - 垂直排列 */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginTop: '16px'
+              }}>
+                <Button
+                  type="primary"
+                  size="small"
+                  style={{
+                    borderRadius: '4px',
+                    backgroundColor: '#722ED1',
+                    borderColor: '#722ED1',
+                    height: '32px',
+                    fontWeight: 500,
+                    fontSize: '13px'
+                  }}
+                  icon={<PercentageOutlined />}
+                  onClick={handleContributionWeightClick}
+                >
+                  Contribution
+                </Button>
+
+                <Button
+                  type="default"
+                  size="small"
+                  style={{
+                    height: '32px',
+                    borderRadius: '6px',
+                    fontWeight: 500,
+                    fontSize: '13px',
+                    borderColor: '#1890ff',
+                    color: isAnimating ? '#ffffff' : '#1890ff',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    zIndex: 1,
+                  }}
+                  onClick={() => handleStartButtonClick(nodeInfoData)}
+                  disabled={isAnimating}
+                >
+                  Train
+                  {isAnimating && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: '#1890ff',
+                        zIndex: -1,
+                        animation: 'fillAnimation 5s linear forwards'
+                      }}
+                    />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
-      </Card>
       )}
 
-      {renderShowButtons()}
-
+      {/* model evolution */}
       <Modal
         title={
           <div style={{
@@ -1686,13 +1947,17 @@ const HomePage: React.FC = () => {
             fontWeight: 500,
             color: '#1890ff',
           }}>
+            <div>
+              {nodeInfoData?.name}
+            </div>
+
             Contribution Weight
           </div>
         }
         visible={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={600}
+        width={900}
         centered
         bodyStyle={{
           padding: '16px',
@@ -1702,8 +1967,8 @@ const HomePage: React.FC = () => {
           overflow: 'hidden',
         }}
         footer={
-          <div style={{ 
-            padding: '12px 24px',
+          <div style={{
+            padding: '12px 12px',
             borderTop: '1px solid #f0f0f0',
             display: 'flex',
             justifyContent: 'flex-end',
@@ -1718,11 +1983,20 @@ const HomePage: React.FC = () => {
           </div>
         }
       >
-        <div style={{ marginBottom: '16px', color: '#666' }}>
+        <div style={{ marginBottom: '5px', color: '#666' }}>
           Total must be 100%
         </div>
         <ContributionWeightContent />
       </Modal>
+
+      <ChatModal
+        show={showChatModel.showModel}
+        data={showChatModel.data}
+        onClose={() => {
+          console.log('111');
+          setShowChatModel({ showModel: false, data: {} });
+        }} />        
+
     </PageContainer>
   );
 };
