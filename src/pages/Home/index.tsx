@@ -19,7 +19,14 @@ const BASEMODEL_V2 = "Home Doctor"
 const BASEMODEL_V3 = "Family Doctor"
 const BASEMODEL_V2_1 = "Dentist"
 const BASEMODEL_V2_2 = "Cardiologist"
-
+const doctorNames = [
+  "Cardiologist", "Neurologist", "Pediatrician", "Surgeon", "Dermatologist",
+  "Oncologist", "Radiologist", "Psychiatrist", "Orthopedist", "Ophthalmologist",
+  "Gynecologist", "Urologist", "Endocrinologist", "Gastroenterologist", "Pulmonologist",
+  "Nephrologist", "Rheumatologist", "Anesthesiologist", "Pathologist", "Hematologist",
+  "Immunologist", "Geneticist", "Internist", "Dentist", "Allergist",
+  "Nutritionist", "Physiotherapist", "Pharmacist", "Epidemiologist", "Virologist"
+];
 
 
 
@@ -421,50 +428,6 @@ const HomePage: React.FC = () => {
         data: data?.data?.properties?.rawData,
       });
 
-      // const nodeId = data?.data?.id;
-      // const nodeName = data?.data?.properties?.rawData?.nodeData?.name;
-
-      // if (!nodeName) {
-      //   message.error('cannot get node info');
-      //   return;
-      // }
-
-      // setSelectedNodeId(nodeId);
-
-      // let modelInfo;
-      // const isModified = manuallyModifiedNodes.includes(nodeName);
-      // if (nodeName && modelsContributionsRef.current[nodeName]) {
-      //   modelInfo = JSON.parse(JSON.stringify(modelsContributionsRef.current[nodeName]));
-      //   if (isModified) {
-      //     modelInfo.isManuallyModified = true;
-      //   }
-      // }
-      // else if (nodeName && modelsContributions[nodeName]) {
-      //   modelInfo = JSON.parse(JSON.stringify(modelsContributions[nodeName]));
-      //   if (isModified) {
-      //     modelInfo.isManuallyModified = true;
-      //   }
-      // } else {
-      //   modelInfo = modelData(data?.data?.properties?.rawData?.nodeData);
-      //   const updatedContributions = {
-      //     ...modelsContributions,
-      //     [nodeName]: modelInfo
-      //   };
-      //   modelsContributionsRef.current = updatedContributions;
-      //   setModelsContributions(updatedContributions);
-      // }
-      // if (!modelInfo.name) {
-      //   modelInfo.name = nodeName;
-      // }
-
-      // if (!modelInfo.contributions) {
-      //   message.error('modelInfo.contributions is empty');
-      //   return;
-      // }
-
-      // setNodeInfoData(modelInfo);
-      // setShowNodeDetails(true);
-      // setShowModelEvolution(true);
     });
   };
 
@@ -727,74 +690,100 @@ const HomePage: React.FC = () => {
     setIsModalVisible(true);
   };
 
+  const tempContributionRef = useRef(null);
+
   const handleModalOk = () => {
     if (!nodeInfoData?.name) return;
 
-    const updatedContributions = {
-      ...modelsContributions,
-      [nodeInfoData.name]: {
-        ...modelsContributions[nodeInfoData.name],
-        contributions: {
-          Based: categoryPercentages.Based[nodeInfoData.name] || 0,
-          ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
-          DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
-          Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
-          Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
-        }
+    // 只更新显示的节点信息，不修改原始数据
+    const updatedNodeInfo = {
+      ...nodeInfoData,
+      contributions: {
+        Based: categoryPercentages.Based[nodeInfoData.name] || 0,
+        ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
+        DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
+        Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
+        Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
       }
     };
 
-    // 更新节点的贡献值
-    const updateNodeInTree = (tree) => {
-      if (tree.nodeData.name === nodeInfoData.name) {
-        tree.nodeData.contributions = {
-          Based: categoryPercentages.Based[nodeInfoData.name] || 0,
-          ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
-          DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
-          Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
-          Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
-        };
-        return true;
-      }
+    // 只更新显示的饼图数据
+    setNodeInfoData(updatedNodeInfo);
 
-      for (const child of tree.children) {
-        if (updateNodeInTree(child)) {
-          return true;
-        }
-      }
-      return false;
+    // 存储临时的贡献值数据，供后续训练使用
+    const tempContributionData = {
+      Based: categoryPercentages.Based[nodeInfoData.name] || 0,
+      ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
+      DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
+      Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
+      Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
     };
 
-    const updatedPrimitiveData = [...testPrimitiveData];
-    updatedPrimitiveData.forEach(tree => updateNodeInTree(tree));
-
-    setModelsContributions(updatedContributions);
-    setTestPrimitiveData(updatedPrimitiveData);
-
-    // 如果当前显示的节点信息就是被修改的节点，更新显示
-    if (nodeInfoData.name === nodeInfoData?.name) {
-      setNodeInfoData({
-        ...nodeInfoData,
-        contributions: updatedContributions[nodeInfoData.name].contributions
-      });
-    }
-
-    // 添加到手动修改的节点列表中
-    if (!manuallyModifiedNodes.includes(nodeInfoData.name)) {
-      setManuallyModifiedNodes([...manuallyModifiedNodes, nodeInfoData.name]);
-    }
+    // 将临时数据存储在 ref 中，供训练时使用
+    tempContributionRef.current = tempContributionData;
 
     setIsModalVisible(false);
 
+    // const updatedContributions = {
+    //   ...modelsContributions,
+    //   [nodeInfoData.name]: {
+    //     ...modelsContributions[nodeInfoData.name],
+    //     contributions: {
+    //       Based: categoryPercentages.Based[nodeInfoData.name] || 0,
+    //       ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
+    //       DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
+    //       Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
+    //       Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
+    //     }
+    //   }
+    // };
 
+    // // 更新节点的贡献值
+    // const updateNodeInTree = (tree) => {
+    //   if (tree.nodeData.name === nodeInfoData.name) {
+    //     tree.nodeData.contributions = {
+    //       Based: categoryPercentages.Based[nodeInfoData.name] || 0,
+    //       ALGO: categoryPercentages.Algo[nodeInfoData.name] || 0,
+    //       DATASET: categoryPercentages.Dataset[nodeInfoData.name] || 0,
+    //       Builder: categoryPercentages.Builder[nodeInfoData.name] || 0,
+    //       Validator: categoryPercentages.Validator[nodeInfoData.name] || 0,
+    //     };
+    //     return true;
+    //   }
+
+    //   for (const child of tree.children) {
+    //     if (updateNodeInTree(child)) {
+    //       return true;
+    //     }
+    //   }
+    //   return false;
+    // };
+
+    // const updatedPrimitiveData = [...testPrimitiveData];
+    // updatedPrimitiveData.forEach(tree => updateNodeInTree(tree));
+
+    // setModelsContributions(updatedContributions);
+    // setTestPrimitiveData(updatedPrimitiveData);
+
+    // // 如果当前显示的节点信息就是被修改的节点，更新显示
+    // if (nodeInfoData.name === nodeInfoData?.name) {
+    //   setNodeInfoData({
+    //     ...nodeInfoData,
+    //     contributions: updatedContributions[nodeInfoData.name].contributions
+    //   });
+    // }
+
+    // // 添加到手动修改的节点列表中
+    // if (!manuallyModifiedNodes.includes(nodeInfoData.name)) {
+    //   setManuallyModifiedNodes([...manuallyModifiedNodes, nodeInfoData.name]);
+    // }
+
+    // setIsModalVisible(false);
 
   };
-
   const handleModalCancel = () => {
     setIsModalVisible(false);
   };
-
-
   useEffect(() => {
     console.log("Updated baseContribution =", baseContribution);
   }, [baseContribution]);
@@ -804,17 +793,27 @@ const HomePage: React.FC = () => {
   }, [baseContribution]);
 
   const handleStartButtonClick = (nodeData) => {
+    // 使用存储的临时贡献值数据
+    const contributionData = tempContributionRef.current || nodeData.contributions;
+
     setIsAnimating(true);
     setTimeout(() => {
-      createNewNode(nodeData);
+      createNewNode(nodeData, contributionData);
       setIsAnimating(false);
-    }, 5000); // 动画持续时间为5秒
+      // 清除临时数据
+      tempContributionRef.current = null;
+    }, 5000);
   };
 
-  const createNewNode = (parentNodeData) => {
+  const createNewNode = (parentNodeData, contributionData) => {
     const newNodeId = generate25DigitID();
     const parentName = parentNodeData.name;
-    const newNodeName = `${parentName}.${Math.floor(Math.random() * 10) + 1}`;
+    
+    // 从医生名称数组中随机选择一个
+    const randomDoctorName = doctorNames[Math.floor(Math.random() * doctorNames.length)];
+    
+    // 使用医生名称作为新节点名称
+    const newNodeName = `${randomDoctorName}`;
 
     // 计算6小时后的时间戳
     const endTime = Date.now() + (6 * 60 * 60 * 1000);
@@ -825,6 +824,7 @@ const HomePage: React.FC = () => {
         name: newNodeName,
         isNewNode: true,
         endTime: endTime,
+        contributions: contributionData,
       },
       children: [],
     };
@@ -832,7 +832,8 @@ const HomePage: React.FC = () => {
     console.log("Creating new node:", {
       parentName,
       newNodeName,
-      newNodeId
+      newNodeId,
+      contributions: contributionData
     });
 
     const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));
@@ -854,6 +855,7 @@ const HomePage: React.FC = () => {
 
       return false;
     };
+
     let nodeAdded = false;
     updatedPrimitiveData.forEach(tree => {
       if (addChildToNode(tree, parentName)) {
@@ -868,16 +870,25 @@ const HomePage: React.FC = () => {
 
     setTestPrimitiveData(updatedPrimitiveData);
 
+    // 更新 modelsContributions
+    const updatedContributions = {
+      ...modelsContributions,
+      [newNodeName]: {
+        name: newNodeName,
+        isNewNode: true,
+        contributions: contributionData,
+      }
+    };
+    setModelsContributions(updatedContributions);
+
     if (lf) {
       const { nodes, edges } = transformTreeToFlowData(updatedPrimitiveData);
-
       // 找到新节点
       const newNode = nodes.find(node => node.id === newNodeId);
       if (newNode) {
         // 只设置节点名称，不包含训练信息
         newNode.text.value = newNodeName;
       }
-
       console.log("Transformed flow data:", { nodes, edges });
       lf.render({ nodes, edges });
 
@@ -985,69 +996,7 @@ const HomePage: React.FC = () => {
     }
     setManuallyModifiedNodes(prev => [...prev, newNodeName]);
 
-    // 6小时后更新节点状态
-    setTimeout(() => {
-      // 找到新创建的节点并更新其属性
-      const node = lf.getNodeModelById(newNodeId);
-      if (node) {
-        // 获取当前属性
-        const currentProps = node.getProperties();
-        // 更新属性，保留原始数据
-        node.setProperties({
-          ...currentProps,
-          isNewNode: false,
-          rawData: {
-            ...currentProps.rawData,
-            nodeData: {
-              ...currentProps.rawData.nodeData,
-              isNewNode: false
-            }
-          }
-        });
 
-        // 重新渲染图形
-        lf.render(lf.getGraphData());
-      }
-
-      // 移除倒计时元素
-      const countdownElement = document.getElementById(`countdown-${newNodeId}`);
-      if (countdownElement) {
-        countdownElement.remove();
-      }
-
-      // 移除事件监听
-      lf.off('transform', updateCountdown);
-
-      // 更新数据模型
-      const updatedPrimitiveData = JSON.parse(JSON.stringify(testPrimitiveData));
-      const updateNodeInTree = (node) => {
-        if (node.nodeData.nodeId === newNodeId) {
-          node.nodeData.isNewNode = false;
-          return true;
-        }
-
-        for (let i = 0; i < node.children.length; i++) {
-          if (updateNodeInTree(node.children[i])) {
-            return true;
-          }
-        }
-
-        return false;
-      };
-
-      updatedPrimitiveData.forEach(tree => {
-        updateNodeInTree(tree);
-      });
-
-      setTestPrimitiveData(updatedPrimitiveData);
-
-      // 更新 modelsContributions
-      const updatedContributions = { ...modelsContributions };
-      if (updatedContributions[newNodeName]) {
-        updatedContributions[newNodeName].isNewNode = false;
-        setModelsContributions(updatedContributions);
-      }
-    }, 6 * 60 * 60 * 1000); // 6小时
   };
 
 
@@ -1448,12 +1397,11 @@ const HomePage: React.FC = () => {
         }
       };
       setCategoryPercentages(newCategoryPercentages);
-
       // 只有当策略是 Based 时才更新树形图
       if (category === 'Based') {
         setBasedValue(value);
-        setTreeDisplayCache(''); // 清除缓存，强制重新计算树形图
-        setTreeUpdateCounter(prev => prev + 1); // 增加更新计数器，触发重新渲染
+        setTreeDisplayCache('');
+        setTreeUpdateCounter(prev => prev + 1);
       }
     };
 
@@ -2055,11 +2003,11 @@ const HomePage: React.FC = () => {
                   defaultValue={nodeInfoData?.algorithm || undefined}
                   size="small"
                 >
-                  <Select.Option value="Linear Regression">Linear Regression</Select.Option>
-                  <Select.Option value="Random Forest">Random Forest</Select.Option>
-                  <Select.Option value="Neural Networks">Neural Networks</Select.Option>
-                  <Select.Option value="FP-Growth">FP-Growth</Select.Option>
-                  <Select.Option value="Decision Tree">Decision Tree</Select.Option>
+                  <Select.Option value="SFT">SFT (Supervised Fine-Tuning)</Select.Option>
+                  <Select.Option value="RL">RL (Reinforcement Learning)</Select.Option>
+                  <Select.Option value="RLHF">RLHF (Reinforcement Learning from Human Feedback)</Select.Option>
+                  <Select.Option value="LoRA">LoRA (Low-Rank Adaptation)</Select.Option>
+                  <Select.Option value="KTO">KTO (KL-constrained Preference Optimization)</Select.Option>
                 </Select>
               </div>
 
