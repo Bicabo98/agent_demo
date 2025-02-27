@@ -42,7 +42,7 @@ const HomePage: React.FC = () => {
 
   const infoDefaultData: any = {
     TotalModels: 5,
-    DataSets: 3,
+    DataSets: 4,
     LaunchedModels: 3,
     Validator: 10,
     Builder: 4,
@@ -880,6 +880,8 @@ const HomePage: React.FC = () => {
       }
     };
     setModelsContributions(updatedContributions);
+    // 更新总模型数量
+  totalModelsRef.current += 1;
 
     if (lf) {
       const { nodes, edges } = transformTreeToFlowData(updatedPrimitiveData);
