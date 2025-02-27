@@ -1302,10 +1302,20 @@ const HomePage: React.FC = () => {
 
   const ContributionWeightContent = () => {
     const categories = ['Based', 'Algo', 'Dataset', 'Builder', 'Validator'];
-
-    // 添加一个state来存储Based的值，用于控制树形图更新
+    
+    // 添加状态变量
+    const [treeDisplayCache, setTreeDisplayCache] = useState('');
+    const [treeUpdateCounter, setTreeUpdateCounter] = useState(0);
     const [basedValue, setBasedValue] = useState(categoryPercentages['Based'][nodeInfoData?.name || ''] || 0);
-
+    
+    // 监听 nodeInfoData 变化，当节点改变时重置缓存和 basedValue
+    useEffect(() => {
+      // 当节点变化时，更新 basedValue 并清除缓存
+      setBasedValue(categoryPercentages['Based'][nodeInfoData?.name || ''] || 0);
+      setTreeDisplayCache('');
+      setTreeUpdateCounter(prev => prev + 1);
+    }, [nodeInfoData?.name]);
+    
     // 获取节点的父节点路径
     const getNodePath = (nodeName: string) => {
       const path: string[] = [];
@@ -1566,27 +1576,29 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* Based树形图区域 */}
-        <div style={{
-          padding: '20px',
-          backgroundColor: '#f0f7ff',
-          borderRadius: '12px',
-          border: '1px solid #e6f0f9',
-          marginBottom: '16px'
-        }}>
+        {nodeInfoData?.name !== BASEMODEL && (
           <div style={{
-            fontFamily: 'Consolas, monospace',
-            whiteSpace: 'pre',
-            color: '#374151',
-            fontSize: '13px',
-            lineHeight: '1.6',
-            backgroundColor: '#fff',
-            padding: '16px',
-            borderRadius: '8px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            padding: '20px',
+            backgroundColor: '#f0f7ff',
+            borderRadius: '12px',
+            border: '1px solid #e6f0f9',
+            marginBottom: '16px'
           }}>
-            {getTreeDisplay('Based')}
+            <div style={{
+              fontFamily: 'Consolas, monospace',
+              whiteSpace: 'pre',
+              color: '#374151',
+              fontSize: '13px',
+              lineHeight: '1.6',
+              backgroundColor: '#fff',
+              padding: '16px',
+              borderRadius: '8px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}>
+              {getTreeDisplay('Based')}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 总计区域 */}
         <div style={{
@@ -1665,6 +1677,8 @@ const HomePage: React.FC = () => {
       setNodeDetailsVisible(false);
     }
   }, [showNodeDetails]);
+
+
 
   return (
     <PageContainer
