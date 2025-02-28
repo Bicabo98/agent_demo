@@ -100,8 +100,9 @@ const ChatWindow: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model_version: "v1",
-          text: message
+          model_version: "smith",
+          text: message,
+          model_type: "smith"
         })
       });
 
