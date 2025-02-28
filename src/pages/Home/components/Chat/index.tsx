@@ -20,7 +20,7 @@ const ChatBaseView: React.FC<Props> = (props) => {
       <Modal
         closable
         destroyOnClose
-        title={'对话'}
+        title={'Chat'}
         open={showChat}
         width={700}
         footer={false}

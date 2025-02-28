@@ -40,6 +40,9 @@ const HomePage: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
 
+  
+
+
   const infoDefaultData: any = {
     TotalModels: 5,
     DataSets: 4,
@@ -419,7 +422,6 @@ const HomePage: React.FC = () => {
     });
 
     logicFlow.on('node:dbclick', (data) => {
-      console.log("测试双击1")
       if (clickTimer) {
         clearTimeout(clickTimer);
         clickTimer = null;
@@ -2204,7 +2206,7 @@ const HomePage: React.FC = () => {
         show={showChatModel.showModel}
         data={showChatModel.data}
         onClose={() => {
-          console.log('111');
+  
           setShowChatModel({ showModel: false, data: {} });
         }} />
 

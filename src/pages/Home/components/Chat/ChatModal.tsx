@@ -25,7 +25,7 @@ const ChatModal: React.FC<Props> = (props) => {
       <Modal title="Chat" keyboard={false} open={isModalVisible} closable afterClose={() => {
         onClose()
       }} onCancel={handleCancel} footer={null} width={600}>
-        <ChatWindow />
+        <ChatWindow nodeData={props.data} />
       </Modal>
     </>
   )

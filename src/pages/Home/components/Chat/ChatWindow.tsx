@@ -8,11 +8,11 @@ import styled from "styled-components"
 
 
 // 模拟数据
-const initialMessages = [
-  { id: 1, sender: "other", content: "Hello!", avatar: "/placeholder.svg?height=40&width=40" },
-  { id: 2, sender: "me", content: "Hello! Nice to meet you.", avatar: "/placeholder.svg?height=40&width=40" },
-  { id: 3, sender: "other", content: "Today is a good day, it's sunny.", avatar: "/placeholder.svg?height=40&width=40" },
-]
+// const initialMessages = [
+//   { id: 1, sender: "other", content: "Hello!", avatar: "/placeholder.svg?height=40&width=40" },
+//   { id: 2, sender: "me", content: "Hello! Nice to meet you.", avatar: "/placeholder.svg?height=40&width=40" },
+//   { id: 3, sender: "other", content: "Today is a good day, it's sunny.", avatar: "/placeholder.svg?height=40&width=40" },
+// ]
 
 const ChatContainer = styled.div`
   display: flex;
@@ -56,45 +56,101 @@ const MessageBubble = styled.div<{ isMine: boolean }>`
     height: 0;
     border: 6px solid transparent;
     ${(props) =>
-            props.isMine
-                    ? `right: -5px;
+    props.isMine
+      ? `right: -5px;
          border-left-color: #95ec69;
          border-right: 0;`
-                    : `left: -5px;
+      : `left: -5px;
          border-right-color: #ffffff;
          border-left: 0;`}
   }
 `
+interface ChatWindowProps {
+  nodeData: any; // 根据实际数据结构定义更具体的类型
+}
+// 创建一个全局变量来存储所有节点的对话历史
+const nodeMessagesHistory: { [key: string]: any[] } = {};
 
-const ChatWindow: React.FC = () => {
-  const [messages, setMessages] = useState(initialMessages)
-  const [inputValue, setInputValue] = useState("")
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const messagesListRef = useRef<HTMLDivElement>(null)
+const ChatWindow: React.FC<ChatWindowProps> = ({ nodeData }) => {
+  //const [messages, setMessages] = useState([]);
+
+  //console.log("123123123nodeData=",nodeData)
+
+
+  const [messages, setMessages] = useState(() => {
+    const nodeName = nodeData?.nodeData?.name;
+    // 如果该节点没有历史记录，初始化为空数组
+    if (!nodeMessagesHistory[nodeName]) {
+      nodeMessagesHistory[nodeName] = [];
+    }
+    return nodeMessagesHistory[nodeName];
+  });
+
+  // 当节点改变时，更新显示的消息
+  useEffect(() => {
+    const nodeName = nodeData?.nodeData?.name;
+    if (!nodeMessagesHistory[nodeName]) {
+      nodeMessagesHistory[nodeName] = [];
+    }
+    setMessages(nodeMessagesHistory[nodeName]);
+  }, [nodeData?.name]);
+
+  const [inputValue, setInputValue] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesListRef = useRef<HTMLDivElement>(null);
+
   const handleSend = async () => {
-
-    console.log(inputValue)
-
     if (inputValue.trim()) {
+      const nodeName = nodeData?.nodeData?.name;
+
+      if (!nodeMessagesHistory[nodeName]) {
+        nodeMessagesHistory[nodeName] = [];
+      }
+      
       const newMessage = {
-        id: messages.length + 1,
+        //id: nodeMessagesHistory[nodeName].length + 1,
         sender: "me",
         content: inputValue.trim(),
         avatar: "/placeholder.svg?height=40&width=40",
-      }
-      setMessages([...messages, newMessage])
-      setInputValue("")
-      // messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      };
 
-      const response = await callChatAPI(inputValue.trim())
-      console.log(response)
+      console.log("输入的message=",newMessage)
+      console.log("测试=",nodeMessagesHistory[nodeName])
+      
+      // 更新当前节点的消息历史
+      const updatedMessages = [...nodeMessagesHistory[nodeName], newMessage];
+
+      console.log("updatedMessages=",updatedMessages)
+      
+      nodeMessagesHistory[nodeName] = updatedMessages;
+      setMessages(updatedMessages);
+      setInputValue("");
+
+      const response = await callChatAPI(inputValue.trim());
+      console.log(response);
+
+      if (response && response.message) {
+        const apiMessage = {
+          //id: updatedMessages.length + 1,
+          sender: "other",
+          content: response.message,
+          avatar: "/placeholder.svg?height=40&width=40",
+        };
+        // 再次更新当前节点的消息历史
+        const finalMessages = [...updatedMessages, apiMessage];
+        nodeMessagesHistory[nodeName] = finalMessages;
+        setMessages(finalMessages);
+        console.log("handleSend对话信息=", finalMessages)
+      }
+
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }
+  };
 
 
   const callChatAPI = async (message: string) => {
     try {
-      const response = await fetch("http://127.0.0.1:6006/api/chat", {
+      const response = await fetch("http://144.126.138.135:6006/api/chat", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,16 +158,12 @@ const ChatWindow: React.FC = () => {
         body: JSON.stringify({
           model_version: "smith",
           text: message,
-          model_type: "smith"
         })
       });
-
-      console.log("response=", response)
-      
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log("API response:", data);
       return data;
@@ -128,20 +180,23 @@ const ChatWindow: React.FC = () => {
   }
 
   useEffect(() => {
-    // 确保更新完成后再滚动
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({
         behavior: "smooth"
       });
     });
-  }, [messages]); // 添加消息数组作为依赖
+  }, [messages]); 
+
+  // console.log("当前对话信息=", messages)
+  // console.log("缓存=",nodeMessagesHistory[nodeData?.nodeData?.name])
 
   return (
     <ChatContainer>
       <MessageList ref={messagesListRef}>
         <List
           itemLayout="horizontal"
-          dataSource={messages}
+          dataSource={nodeMessagesHistory[nodeData?.nodeData?.name]}
+          locale={{ emptyText: "No messages yet" }}
           renderItem={(item) => (
             <List.Item
               style={{
