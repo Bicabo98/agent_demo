@@ -94,7 +94,7 @@ const ChatWindow: React.FC = () => {
 
   const callChatAPI = async (message: string) => {
     try {
-      const response = await fetch("http://144.126.138.135:1234/api/chat", {
+      const response = await fetch("http://127.0.0.1:6006/api/chat", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
