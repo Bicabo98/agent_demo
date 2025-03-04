@@ -14,7 +14,7 @@ import { PieChart, Pie, Cell, Legend, Tooltip, Label, ResponsiveContainer } from
 import { registerNewWhiteNode } from './components/NewWhiteNode/newWhiteNode';
 import ChatModal from './components/Chat/ChatModal';
 
-const BASEMODEL = "Medical Model"
+const BASEMODEL = "Akasha Model"
 const BASEMODEL_V2 = "Home Doctor"
 const BASEMODEL_V3 = "Family Doctor"
 const BASEMODEL_V2_1 = "Dentist"
@@ -104,37 +104,38 @@ const HomePage: React.FC = () => {
         nodeId: generate25DigitID(),
         name: BASEMODEL,
       },
-      children: [
-        {
-          nodeData: {
-            nodeId: generate25DigitID(),
-            name: BASEMODEL_V2,
-          },
-          children: [
-            {
-              nodeData: {
-                nodeId: generate25DigitID(),
-                name: BASEMODEL_V2_1,
-              },
-              children: [],
-            },
-            {
-              nodeData: {
-                nodeId: generate25DigitID(),
-                name: BASEMODEL_V2_2,
-              },
-              children: [],
-            },
-          ],
-        },
-        {
-          nodeData: {
-            nodeId: generate25DigitID(),
-            name: BASEMODEL_V3,
-          },
-          children: [],
-        },
-      ],
+      // children: [
+      //   {
+      //     nodeData: {
+      //       nodeId: generate25DigitID(),
+      //       name: BASEMODEL_V2,
+      //     },
+      //     children: [
+      //       {
+      //         nodeData: {
+      //           nodeId: generate25DigitID(),
+      //           name: BASEMODEL_V2_1,
+      //         },
+      //         children: [],
+      //       },
+      //       {
+      //         nodeData: {
+      //           nodeId: generate25DigitID(),
+      //           name: BASEMODEL_V2_2,
+      //         },
+      //         children: [],
+      //       },
+      //     ],
+      //   },
+      //   {
+      //     nodeData: {
+      //       nodeId: generate25DigitID(),
+      //       name: BASEMODEL_V3,
+      //     },
+      //     children: [],
+      //   },
+      // ],
+
     },
   ]);
 
@@ -299,6 +300,8 @@ const HomePage: React.FC = () => {
           processNode(child, nodeId, level + 1, childIndex);
         });
       }
+
+
     };
 
     treeData.forEach((tree, index) => {
@@ -312,7 +315,8 @@ const HomePage: React.FC = () => {
     let count = 0;
     const countNodes = (tree) => {
       count++;
-      tree.children.forEach(child => countNodes(child));
+      //tree.children.forEach(child => countNodes(child));
+
     };
 
     testPrimitiveData.forEach(tree => countNodes(tree));
@@ -336,7 +340,7 @@ const HomePage: React.FC = () => {
       while (stack.length > 0) {
         const node = stack.pop();
         initialData[node.nodeData.name] = modelData(node.nodeData);
-        node.children.forEach(child => stack.push(child));
+        //node.children.forEach(child => stack.push(child));
       }
     });
     setModelsContributions(initialData);
@@ -1032,7 +1036,7 @@ const HomePage: React.FC = () => {
           hasChanges = true;
         }
 
-        node.children.forEach(child => stack.push(child));
+        //node.children.forEach(child => stack.push(child));
       }
     });
 
