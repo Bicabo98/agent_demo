@@ -156,7 +156,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ nodeData }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model_version: "smith",
+          model_version: "akasha",
+          //model_version: "smith",
           text: message,
         })
       });
