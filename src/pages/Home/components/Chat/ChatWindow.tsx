@@ -96,6 +96,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ nodeData }) => {
   }, [nodeData?.name]);
 
   const [inputValue, setInputValue] = useState("");
+  const [sessionId, setSessionId] = useState<string | null>(null); // 新增状态来存储 session_id
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesListRef = useRef<HTMLDivElement>(null);
 
@@ -114,10 +115,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ nodeData }) => {
         avatar: "/placeholder.svg?height=40&width=40",
       };
 
-      console.log("输入的message=",newMessage)
-      console.log("测试=",nodeMessagesHistory[nodeName])
-      
-      // 更新当前节点的消息历史
+      //console.log("输入的message=",newMessage)
+      //console.log("测试=",nodeMessagesHistory[nodeName])
+    
       const updatedMessages = [...nodeMessagesHistory[nodeName], newMessage];
 
       console.log("updatedMessages=",updatedMessages)
@@ -126,21 +126,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ nodeData }) => {
       setMessages(updatedMessages);
       setInputValue("");
 
-      const response = await callChatAPI(inputValue.trim());
-      console.log(response);
+ 
+      const response= await callChatAPI(inputValue.trim(), sessionId);
+      console.log("response:", response);
 
-      if (response && response.message) {
+  
+      if (response.session_id) {
+        setSessionId(response.session_id);
+      }
+
+   
+      if (response) {
         const apiMessage = {
           //id: updatedMessages.length + 1,
           sender: "other",
-          content: response.message,
+          content:  response.message, 
           avatar: "/placeholder.svg?height=40&width=40",
         };
-        // 再次更新当前节点的消息历史
+      
         const finalMessages = [...updatedMessages, apiMessage];
         nodeMessagesHistory[nodeName] = finalMessages;
         setMessages(finalMessages);
-        console.log("handleSend对话信息=", finalMessages)
+       // console.log("handleSend对话信息=", finalMessages)
       }
 
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -148,26 +155,38 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ nodeData }) => {
   };
 
 
-  const callChatAPI = async (message: string) => {
+  const callChatAPI = async (message: string, sessionId?: string) => {
     try {
-      const response = await fetch("http://144.126.138.135:6006/api/chat", {
+      const url = "https://kol.teeml.ai/api/chat";
+      
+
+      const body = {
+        model_version: "akasha",
+        text: message,
+      };
+
+  
+      if (sessionId) {
+        body.session_id = sessionId;
+      }
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model_version: "akasha",
-          //model_version: "smith",
-          text: message,
-        })
+        body: JSON.stringify(body),
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
       const data = await response.json();
       console.log("API response:", data);
-      return data;
+      
+     
+      return data || null; 
     } catch (error) {
       console.error("Error calling chat API:", error);
       return null;
